@@ -1,0 +1,11 @@
+init:
+	python3.14 -m venv .venv
+	.venv/bin/pip install uv
+	uv venv --clear --python 3.14
+	uv sync --all-extras
+
+HOST ?= 0.0.0.0
+PORT ?= 8080
+
+start:
+	uv run granian --interface asgi --host $(HOST) --port $(PORT) json_storage.cmd.rest:app
