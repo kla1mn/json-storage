@@ -1,0 +1,27 @@
+[project]
+name = "json-storage"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "dishka>=1.7.2",
+    "fastapi>=0.120.4",
+    "granian[reload]>=2.4.0",
+    "pydantic>=2.12.3",
+    "taskiq>=0.11.20",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-env>=1.1.5",
+    "pytest-httpx>=0.35.0",
+    "pytest-mock>=3.14.0",
+    "pytest-sugar>=1.0.0",
+    "pytest-xdist>=3.6.1",
+    "ruff>=0.12.1",
+]
