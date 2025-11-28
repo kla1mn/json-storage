@@ -3,7 +3,7 @@ services:
     build: .
     container_name: json-storage
     environment:
-      POSTGRES_DSN: postgresql://json:json@postgres:5432/json
+      POSTGRES_DSN: postgresql://json:json@postgres:5432/jsonstorage
       ELASTICSEARCH_URL: http://elastic-data:9200
     ports:
       - "8080:8080"
@@ -18,9 +18,9 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: postgres
+    container_name: pg
     environment:
-      POSTGRES_DB: json
+      POSTGRES_DB: jsonstorage
       POSTGRES_USER: json
       POSTGRES_PASSWORD: json
     ports:
