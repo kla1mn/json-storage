@@ -1,3 +1,5 @@
+DIRS=json_storage tests
+
 init:
 	python3.14 -m venv .venv
 	.venv/bin/pip install uv
@@ -9,3 +11,18 @@ PORT ?= 8080
 
 start:
 	uv run granian --interface asgi --host $(HOST) --port $(PORT) json_storage.cmd.rest:app
+
+format:
+	ruff format $(DIRS)
+
+# fix:
+# 	ruff --fix $(DIRS)
+
+# lint:
+# 	ruff check $(DIRS)
+# 	ruff format $(DIRS) --check
+# 	mypy .
+# 	python manage.py makemigrations --check
+
+#test:
+#	pytest tests

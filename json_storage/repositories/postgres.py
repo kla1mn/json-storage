@@ -13,41 +13,10 @@ from psycopg_pool import AsyncConnectionPool
 
 from json_storage.schemas import DocumentSchema, DocumentListSchema
 
-# await cur.execute(
-#     """
-#     create table if not exists json_documents_meta
-#     (
-#         id
-#         uuid
-#         primary
-#         key,
-#         namespace
-#         text
-#         not
-#         null,
-#         status
-#         text
-#         not
-#         null,
-#         metadata
-#         jsonb,
-#         created_at
-#         timestamptz
-#         not
-#         null
-#         default
-#         now
-#     (
-#     ),
-#         updated_at timestamptz not null default now
-#     (
-#     )
-#         );
-#     """
-# )
 
 @dataclass
 class PostgresDBRepository:
+    # TODO: хочу кастомный контекстный менеджер вместо вложенных with connection, with pool и тд
     dsn: str
 
     _pool: AsyncConnectionPool | None = field(init=False, default=None)
@@ -58,6 +27,12 @@ class PostgresDBRepository:
 
         return self._pool
 
+    # TODO: без этой штуки не умирает коннекшен в тестах, скорее всего и в реальной работе тоже умирать не будет
+    async def aclose(self) -> None:
+        if self._pool is not None:
+            await self._pool.close()
+            self._pool = None
+
     async def create_data_table(self) -> None:
         pool = await self._get_pool()
         async with pool.connection() as conn:
@@ -65,13 +40,53 @@ class PostgresDBRepository:
                 await cur.execute(
                     """
                     create table if not exists json_documents_data (
-                        id uuid primary key references json_documents_meta(id) on delete cascade,
+                        id uuid primary key,
                         content bytea not null
                     );
                     """
                 )
-
             await conn.commit()
+
+    async def get_data_by_id(self, doc_id: str) -> Optional[bytes]:
+        pool = await self._get_pool()
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    select content
+                    from json_documents_data
+                    where id = %s
+                    """,
+                    (uid,),
+                )
+                row = await cur.fetchone()
+
+        if row is None:
+            return None
+
+        (content,) = row
+        return content
+
+    async def delete_data_by_id(self, doc_id: str) -> bool:
+        pool = await self._get_pool()
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    delete
+                    from json_documents_data
+                    where id = %s
+                    """,
+                    (uid,),
+                )
+                deleted_rows = cur.rowcount
+            await conn.commit()
+
+        return deleted_rows > 0
 
     async def create_meta_table_by_namespace(self, namespace: str) -> None:
         # TODO: хочеца проверку на содержимое неймспейса по регулярочке, а пока "слушаю и верю каждому твоему слову"
@@ -80,7 +95,7 @@ class PostgresDBRepository:
             async with conn.cursor() as cur:
                 await cur.execute(
                     sql.SQL(
-                    """
+                        """
                     create table if not exists {} (
                         id uuid primary key,
                         namespace text not null,
@@ -90,7 +105,8 @@ class PostgresDBRepository:
                         updated_at timestamptz not null default now()
                     );
                     """
-                ).format(sql.Identifier(namespace)))
+                    ).format(sql.Identifier(namespace))
+                )
 
             await conn.commit()
 
@@ -102,11 +118,9 @@ class PostgresDBRepository:
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    sql.SQL("drop table if exists {}")
-                    .format(sql.Identifier(namespace))
+                    sql.SQL("drop table if exists {}").format(sql.Identifier(namespace))
                 )
             await conn.commit()
-
 
     async def create_document(
         self,
