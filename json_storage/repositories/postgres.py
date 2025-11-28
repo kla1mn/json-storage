@@ -6,12 +6,45 @@ from typing import Any, Optional
 import json
 import uuid
 import uuid_extensions
+from psycopg import sql
 
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from json_storage.schemas import DocumentSchema, DocumentListSchema
 
+# await cur.execute(
+#     """
+#     create table if not exists json_documents_meta
+#     (
+#         id
+#         uuid
+#         primary
+#         key,
+#         namespace
+#         text
+#         not
+#         null,
+#         status
+#         text
+#         not
+#         null,
+#         metadata
+#         jsonb,
+#         created_at
+#         timestamptz
+#         not
+#         null
+#         default
+#         now
+#     (
+#     ),
+#         updated_at timestamptz not null default now
+#     (
+#     )
+#         );
+#     """
+# )
 
 @dataclass
 class PostgresDBRepository:
@@ -25,22 +58,10 @@ class PostgresDBRepository:
 
         return self._pool
 
-    async def init_tables(self) -> None:
+    async def create_data_table(self) -> None:
         pool = await self._get_pool()
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(
-                    """
-                    create table if not exists json_documents_meta (
-                        id uuid primary key,
-                        namespace text not null,
-                        status text not null,
-                        metadata jsonb,
-                        created_at timestamptz not null default now(),
-                        updated_at timestamptz not null default now()
-                    );
-                    """
-                )
                 await cur.execute(
                     """
                     create table if not exists json_documents_data (
@@ -51,6 +72,41 @@ class PostgresDBRepository:
                 )
 
             await conn.commit()
+
+    async def create_meta_table_by_namespace(self, namespace: str) -> None:
+        # TODO: хочеца проверку на содержимое неймспейса по регулярочке, а пока "слушаю и верю каждому твоему слову"
+        pool = await self._get_pool()
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    sql.SQL(
+                    """
+                    create table if not exists {} (
+                        id uuid primary key,
+                        namespace text not null,
+                        status text not null,
+                        metadata jsonb,
+                        created_at timestamptz not null default now(),
+                        updated_at timestamptz not null default now()
+                    );
+                    """
+                ).format(sql.Identifier(namespace)))
+
+            await conn.commit()
+
+    async def drop_meta_table_by_namespace(self, namespace: str) -> None:
+        # TODO: тоже бы проверочку названия, хотя if exists скипнет,
+        #  но в целом чтоб не делать лишний запрос можно и проверить на этом этапе
+        pool = await self._get_pool()
+
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    sql.SQL("drop table if exists {}")
+                    .format(sql.Identifier(namespace))
+                )
+            await conn.commit()
+
 
     async def create_document(
         self,
