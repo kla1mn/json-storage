@@ -18,6 +18,11 @@ format:
 fix:
 	ruff check --fix $(DIRS)
 
+lint:
+	ruff check --fix $(DIRS)
+	ruff format $(DIRS)
+	mypy .
+
 up:
 	docker compose up -d
 

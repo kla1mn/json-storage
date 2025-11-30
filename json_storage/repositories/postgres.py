@@ -282,6 +282,7 @@ class PostgresDBRepository:
                 content_hash=r["content_hash"],
             )
             for r in rows
+            if r is not None
         ]
 
         return DocumentListSchema(items=items, count=total_row["cnt"])
