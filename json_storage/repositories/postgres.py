@@ -146,10 +146,12 @@ class PostgresDBRepository:
                         """
                         insert into {} (id, document_name, content_length, content_hash)
                         values (%s, %s, %s, %s)
+                        returning created_at, updated_at
                         """
                     ).format(sql.Identifier(table)),
                     (doc_id, document_name, content_length, content_hash),
                 )
+                created_at, updated_at = await cur.fetchone()
 
                 await cur.execute(
                     """
@@ -161,12 +163,11 @@ class PostgresDBRepository:
 
             await conn.commit()
 
-        now = dt.datetime.now()
         return DocumentSchema(
             id=str(doc_id),
             document_name=document_name,
-            created_at=now,
-            updated_at=now,
+            created_at=created_at,
+            updated_at=updated_at,
             content_length=content_length,
             content_hash=content_hash,
         )
@@ -236,7 +237,7 @@ class PostgresDBRepository:
 
         return deleted > 0
 
-    async def get_list_documents_meta(
+    async def list_documents_meta(
         self,
         namespace: str,
         limit: int = 10,
