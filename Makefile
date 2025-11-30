@@ -22,7 +22,12 @@ format:
 # 	ruff check $(DIRS)
 # 	ruff format $(DIRS) --check
 # 	mypy .
-# 	python manage.py makemigrations --check
 
 #test:
 #	pytest tests
+
+up:
+    docker compose up -d
+
+down:
+    docker compose down
