@@ -1,0 +1,102 @@
+services:
+  app:
+    build: .
+    container_name: json-storage
+    environment:
+      POSTGRES_DSN: postgresql://json:json@postgres:5432/jsonstorage
+      ELASTICSEARCH_URL: http://elastic-data:9200
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - elastic-data
+#    logging:
+#      driver: gelf
+#      options:
+#        gelf-address: "udp://logstash:12201"
+#        tag: "json-storage"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: jsonstorage
+      POSTGRES_USER: json
+      POSTGRES_PASSWORD: json
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  elastic-data:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+    container_name: elastic-data
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=es-data
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+#  elastic-logs:
+#    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
+#    container_name: elastic-logs
+#    environment:
+#      - discovery.type=single-node
+#      - xpack.security.enabled=false
+#      - cluster.name=es-logs
+#      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+#    ports:
+#      - "9201:9200"
+#    volumes:
+#      - eslogs:/usr/share/elasticsearch/data
+#
+#  kibana:
+#    image: docker.elastic.co/kibana/kibana:8.15.2
+#    container_name: kibana
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://elastic-logs:9200
+#    ports:
+#      - "5601:5601"
+#    depends_on:
+#      - elastic-logs
+#
+#  logstash:
+#    image: docker.elastic.co/logstash/logstash:8.15.2
+#    container_name: logstash
+#    depends_on:
+#      - elastic-logs
+#    ports:
+#      - "12201:12201/udp"
+#    volumes:
+#      - ./logstash-pipeline.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+#    environment:
+#      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+#
+#  prometheus:
+#    image: prom/prometheus:v2.55.1
+#    container_name: prometheus
+#    command: --config.file=/etc/prometheus/prometheus.yml
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#    ports:
+#      - "9090:9090"
+#
+#  grafana:
+#    image: grafana/grafana:11.2.0
+#    container_name: grafana
+#    ports:
+#      - "3000:3000"
+#    volumes:
+#      - grafana-data:/var/lib/grafana
+#    depends_on:
+#      - prometheus
+#
+volumes:
+  pgdata:
+  esdata:
+#  eslogs:
+#  grafana-data:
