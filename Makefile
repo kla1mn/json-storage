@@ -15,19 +15,11 @@ start:
 format:
 	ruff format $(DIRS)
 
-# fix:
-# 	ruff --fix $(DIRS)
-
-# lint:
-# 	ruff check $(DIRS)
-# 	ruff format $(DIRS) --check
-# 	mypy .
-
-#test:
-#	pytest tests
+fix:
+	ruff check --fix $(DIRS)
 
 up:
-    docker compose up -d
+	docker compose up -d
 
 down:
-    docker compose down
+	docker compose down

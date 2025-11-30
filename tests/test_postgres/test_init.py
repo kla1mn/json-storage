@@ -149,7 +149,9 @@ async def test_create_document_writes_meta_and_buffer():
 
     assert isinstance(doc, DocumentSchema)
     assert doc.document_name == document_name
-    assert doc.content_length == len(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    assert doc.content_length == len(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    )
     assert isinstance(doc.content_hash, str)
     assert doc.id
 

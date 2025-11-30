@@ -6,7 +6,6 @@ from typing import Any, Optional
 
 import json
 import uuid
-import datetime as dt
 import uuid_extensions
 from psycopg import sql
 
@@ -126,10 +125,10 @@ class PostgresDBRepository:
             await conn.commit()
 
     async def create_document(
-            self,
-            namespace: str,
-            document_name: str,
-            payload: dict[str, Any],
+        self,
+        namespace: str,
+        document_name: str,
+        payload: dict[str, Any],
     ) -> DocumentSchema:
         pool = await self._get_pool()
         table = namespace + "_metadata"
@@ -173,9 +172,9 @@ class PostgresDBRepository:
         )
 
     async def get_document_meta(
-            self,
-            namespace: str,
-            doc_id: str,
+        self,
+        namespace: str,
+        doc_id: str,
     ) -> Optional[DocumentSchema]:
         pool = await self._get_pool()
         table = namespace + "_metadata"
