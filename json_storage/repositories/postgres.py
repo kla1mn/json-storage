@@ -91,7 +91,7 @@ class PostgresDBRepository:
 
     async def create_meta_table_by_namespace(self, namespace: str) -> None:
         # TODO: хочеца проверку на содержимое неймспейса по регулярочке, а пока "слушаю и верю каждому твоему слову"
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
         pool = await self._get_pool()
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
@@ -116,11 +116,11 @@ class PostgresDBRepository:
         # TODO: тоже бы проверочку названия, хотя if exists скипнет,
         #  но в целом чтоб не делать лишний запрос можно и проверить на этом этапе
         pool = await self._get_pool()
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    sql.SQL("drop table if exists {}").format(sql.Identifier(table))
+                    sql.SQL('drop table if exists {}').format(sql.Identifier(table))
                 )
             await conn.commit()
 
@@ -131,10 +131,10 @@ class PostgresDBRepository:
         payload: dict[str, Any],
     ) -> DocumentSchema:
         pool = await self._get_pool()
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
 
         doc_id = uuid_extensions.uuid7()
-        raw_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        raw_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
         content_length = len(raw_bytes)
         content_hash = hashlib.sha256(raw_bytes).hexdigest()
 
@@ -177,7 +177,7 @@ class PostgresDBRepository:
         doc_id: str,
     ) -> Optional[DocumentSchema]:
         pool = await self._get_pool()
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
         uid = uuid.UUID(doc_id)
 
         async with pool.connection() as conn:
@@ -203,12 +203,12 @@ class PostgresDBRepository:
             return None
 
         return DocumentSchema(
-            id=str(row["id"]),
-            document_name=row["document_name"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-            content_length=row["content_length"],
-            content_hash=row["content_hash"],
+            id=str(row['id']),
+            document_name=row['document_name'],
+            created_at=row['created_at'],
+            updated_at=row['updated_at'],
+            content_length=row['content_length'],
+            content_hash=row['content_hash'],
         )
 
     async def delete_document_meta(
@@ -217,7 +217,7 @@ class PostgresDBRepository:
         doc_id: str,
     ) -> bool:
         pool = await self._get_pool()
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
         uid = uuid.UUID(doc_id)
 
         async with pool.connection() as conn:
@@ -243,7 +243,7 @@ class PostgresDBRepository:
         offset: int = 0,
     ) -> DocumentListSchema:
         pool = await self._get_pool()
-        table = namespace + "_metadata"
+        table = namespace + '_metadata'
 
         async with pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
@@ -266,7 +266,7 @@ class PostgresDBRepository:
                 rows = await cur.fetchall()
 
                 await cur.execute(
-                    sql.SQL("select count(*) as cnt from {}").format(
+                    sql.SQL('select count(*) as cnt from {}').format(
                         sql.Identifier(table)
                     )
                 )
@@ -274,15 +274,15 @@ class PostgresDBRepository:
 
         items = [
             DocumentSchema(
-                id=str(r["id"]),
-                document_name=r["document_name"],
-                created_at=r["created_at"],
-                updated_at=r["updated_at"],
-                content_length=r["content_length"],
-                content_hash=r["content_hash"],
+                id=str(r['id']),
+                document_name=r['document_name'],
+                created_at=r['created_at'],
+                updated_at=r['updated_at'],
+                content_length=r['content_length'],
+                content_hash=r['content_hash'],
             )
             for r in rows
             if r is not None
         ]
 
-        return DocumentListSchema(items=items, count=total_row["cnt"])
+        return DocumentListSchema(items=items, count=total_row['cnt'])

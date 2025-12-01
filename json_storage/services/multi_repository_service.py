@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
 from json_storage.schemas import DocumentListSchema
 
-JSONType = TypeVar("JSONType", bound=dict[str, Any])
+JSONType = TypeVar('JSONType', bound=dict[str, Any])
 
 
 @dataclass
@@ -17,9 +17,13 @@ class MultiRepositoryService:
 
     async def get_object_by_id(self, namespace: str, object_id: UUID) -> JSONType: ...
 
-    async def create_object(self, namespace: str, data: JSONType) -> UUID: ...
+    async def create_object(
+        self, namespace: str, data: JSONType
+    ) -> UUID: ...  # TODO: taskiq
 
-    async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None: ...
+    async def delete_object_by_id(
+        self, namespace: str, object_id: UUID
+    ) -> None: ...  # TODO: taskiq
 
     async def set_search_schema(
         self,
@@ -29,8 +33,11 @@ class MultiRepositoryService:
 
     async def search_objects(self, namespace: str) -> list[JSONType]: ...
 
-    async def read_namespace(self, name: str) -> DocumentListSchema: ...
+    async def read_namespace(self, namespace: str) -> DocumentListSchema: ...
 
     async def read_limit_namespace(
-        self, namespace: str, limit: int, cursor: str
+        self,
+        namespace: str,
+        limit: int,
+        cursor: str,
     ) -> DocumentListSchema: ...

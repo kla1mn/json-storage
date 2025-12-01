@@ -1,15 +1,24 @@
-from dishka import Provider, Scope
+from dishka import Provider, Scope, provide
 from .repositories import PostgresDBRepository, ElasticSearchDBRepository
 from .services import MultiRepositoryService
+from .settings import settings
 
-provider = Provider(scope=Scope.REQUEST)
+
+class DataBaseProvider(Provider):
+    scope = Scope.REQUEST
+
+    @provide(scope=Scope.REQUEST)
+    @staticmethod
+    def get_postgres_db() -> PostgresDBRepository:
+        return PostgresDBRepository(dsn=settings.elastic_search.dsn)
+
+    @provide(scope=Scope.REQUEST)
+    @staticmethod
+    def get_elasticsearch_db() -> ElasticSearchDBRepository:
+        return ElasticSearchDBRepository(url=settings.elastic_search.dsn)
 
 
-# Repositories
+provider = DataBaseProvider()
 
-provider.provide(PostgresDBRepository)
-provider.provide(ElasticSearchDBRepository)
 # Services
-
 provider.provide(MultiRepositoryService)
-# UseCases
