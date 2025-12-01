@@ -1,3 +1,3 @@
-from json_storage.bootstrap import create_app
+from json_storage.bootstrap import create_fastapi_app
 
-app = create_app()
+app = create_fastapi_app()

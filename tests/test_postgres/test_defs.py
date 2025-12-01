@@ -4,12 +4,12 @@ import json
 
 import psycopg
 import pytest
-
+from json_storage.settings import settings
 from json_storage.repositories.postgres import PostgresDBRepository
 from json_storage.schemas import DocumentSchema, DocumentListSchema
 
 
-DSN = os.getenv("PG_DSN", "postgresql://json:json@localhost:5432/jsonstorage")
+DSN = settings.postgres.dsn
 
 
 @pytest.mark.asyncio
