@@ -12,7 +12,7 @@ JSONType = dict[str, Any]
 
 @dataclass
 class ElasticSearchDBRepository:
-    url: str = "http://localhost:9200"
+    url: str = 'http://localhost:9200'
 
     _client: AsyncElasticsearch | None = field(init=False, default=None)
 
@@ -31,7 +31,7 @@ class ElasticSearchDBRepository:
         index: str,
         doc_id: str,
         document: JSONType,
-        refresh: str | None = "wait_for",
+        refresh: str | None = 'wait_for',
     ) -> bool:
         client = await self._get_client()
         resp = await client.index(
@@ -41,9 +41,9 @@ class ElasticSearchDBRepository:
             refresh=refresh,
         )
 
-        body = getattr(resp, "body", resp)
-        result = body.get("result")
-        return result in ("created", "updated")
+        body = getattr(resp, 'body', resp)
+        result = body.get('result')
+        return result in ('created', 'updated')
 
     async def get_document(
         self,
@@ -56,14 +56,14 @@ class ElasticSearchDBRepository:
         except NotFoundError:
             return None
 
-        body = getattr(resp, "body", resp)
-        return body.get("_source")
+        body = getattr(resp, 'body', resp)
+        return body.get('_source')
 
     async def delete_document(
         self,
         index: str,
         doc_id: str,
-        refresh: str | None = "wait_for",
+        refresh: str | None = 'wait_for',
     ) -> bool:
         client = await self._get_client()
         try:
@@ -75,5 +75,5 @@ class ElasticSearchDBRepository:
         except NotFoundError:
             return False
 
-        body = getattr(resp, "body", resp)
-        return body.get("result") == "deleted"
+        body = getattr(resp, 'body', resp)
+        return body.get('result') == 'deleted'

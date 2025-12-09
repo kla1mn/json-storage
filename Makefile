@@ -7,10 +7,15 @@ init:
 	uv sync --all-extras
 
 HOST ?= 0.0.0.0
-PORT ?= 8080
+PORT ?= 8079
 
 start:
 	uv run granian --interface asgi --host $(HOST) --port $(PORT) json_storage.cmd.rest:app
+
+
+start_taskiq:
+	taskiq worker json_storage.cmd.taskiq_broker:taskiq_broker json_storage.tasks --log-level=DEBUG
+
 
 format:
 	ruff format $(DIRS)

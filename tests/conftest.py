@@ -3,7 +3,10 @@ import os
 import psycopg
 import pytest
 
-DSN = os.getenv("PG_DSN", "postgresql://json:json@localhost:5432/jsonstorage")
+DSN = os.getenv('PG_DSN', 'postgresql://json:json@localhost:5432/jsonstorage')
+
+
+pytest_plugins = ('tests.fixtures.db',)
 
 
 @pytest.fixture(autouse=True)
@@ -13,7 +16,7 @@ def cleanup_db_after_test():
     # код после yield выполняется после теста
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
-        cur.execute("truncate table json_buffer restart identity cascade;")
+        cur.execute('truncate table json_buffer restart identity cascade;')
 
         cur.execute(
             """

@@ -10,11 +10,21 @@ services:
     depends_on:
       - postgres
       - elastic-data
+    env_file:
+      - .env
 #    logging:
 #      driver: gelf
 #      options:
 #        gelf-address: "udp://logstash:12201"
 #        tag: "json-storage"
+
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   postgres:
     image: postgres:16-alpine
