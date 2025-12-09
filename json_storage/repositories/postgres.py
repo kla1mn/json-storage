@@ -239,29 +239,38 @@ class PostgresDBRepository:
     async def list_documents_meta(
         self,
         namespace: str,
-        limit: int = 10,
-        offset: int = 0,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> DocumentListSchema:
         pool = await self._get_pool()
         table = namespace + '_metadata'
 
         async with pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    sql.SQL(
+                query = [
+                        sql.SQL(
                         """
                         select id,
-                               document_name,
-                               content_length,
-                               content_hash,
-                               created_at,
-                               updated_at
+                            document_name,
+                            content_length,
+                            content_hash,
+                            created_at,
+                            updated_at
                         from {}
                         order by created_at desc
-                        limit %s offset %s
                         """
                     ).format(sql.Identifier(table)),
-                    (limit, offset),
+                ]
+                params = []
+                if limit is not None:
+                    query.append(sql.SQL('limit %s'))
+                    params.append(limit)
+                if offset is not None:
+                    query.append(sql.SQL('offset %s'))
+                    params.append(offset)
+                await cur.execute(
+                    sql.SQL(" ").join(query),
+                    params,
                 )
                 rows = await cur.fetchall()
 

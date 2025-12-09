@@ -33,7 +33,8 @@ class MultiRepositoryService:
 
     async def search_objects(self, namespace: str) -> list[JSONType]: ...
 
-    async def read_namespace(self, namespace: str) -> DocumentListSchema: ...
+    async def read_namespace(self, namespace: str) -> DocumentListSchema:
+        ...
 
     async def read_limit_namespace(
         self,
