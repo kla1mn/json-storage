@@ -33,11 +33,17 @@ class MultiRepositoryService:
 
     async def search_objects(self, namespace: str) -> list[JSONType]: ...
 
-    async def read_namespace(self, namespace: str) -> DocumentListSchema: ...
+    async def read_namespace(self, namespace: str) -> DocumentListSchema:
+        if namespace not in self.NAMESPACES:
+            return DocumentListSchema()
+        return await self.postgres_repository.list_documents_meta(namespace)
 
     async def read_limit_namespace(
         self,
         namespace: str,
         limit: int,
         cursor: str,
-    ) -> DocumentListSchema: ...
+    ) -> DocumentListSchema:
+        if namespace not in self.NAMESPACES:
+            return DocumentListSchema()
+        return await self.postgres_repository.list_documents_meta(namespace, limit=limit, cursor=cursor)

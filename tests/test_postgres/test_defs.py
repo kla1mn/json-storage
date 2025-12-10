@@ -250,7 +250,7 @@ async def test_delete_document_meta():
 
 
 @pytest.mark.asyncio
-async def test_list_documents_meta_pagination_and_count():
+async def test_list_documents_meta_offset_pagination_and_count():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
 
@@ -278,5 +278,50 @@ async def test_list_documents_meta_pagination_and_count():
     lst2 = await repo.list_documents_meta(namespace, limit=3, offset=2)
     assert lst2.count == 5
     assert len(lst2.items) == 3
+
+    await repo.aclose()
+
+
+@pytest.mark.asyncio
+async def test_list_documents_meta_cursor_pagination_and_count():
+    repo = PostgresDBRepository(dsn=DSN)
+    await repo.create_buffer_table()
+    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
+    await repo.create_meta_table_by_namespace(namespace)
+    payload = {"k": "v"}
+    docs = []
+    doc_count = 10
+    for i in range(doc_count):
+        d = await repo.create_document(
+            namespace,
+            f"name-{i}",
+            {**payload, "idx": i},
+        )
+        docs.append(d)
+    docs.reverse()
+    
+    lst1 = await repo.list_documents_meta(namespace)
+    assert isinstance(lst1, DocumentListSchema)
+    assert lst1.count == doc_count
+    assert len(lst1.items) == doc_count
+    assert lst1.items == docs
+
+    lst2 = await repo.list_documents_meta(namespace, cursor=docs[3].id)
+    assert isinstance(lst2, DocumentListSchema)
+    assert lst2.count == doc_count
+    assert len(lst2.items) == doc_count - 3
+    assert lst2.items == [docs[i] for i in range(3, doc_count)]
+
+    lst3 = await repo.list_documents_meta(namespace, limit=5, cursor=docs[7].id)
+    assert isinstance(lst3, DocumentListSchema)
+    assert lst3.count == doc_count
+    assert len(lst3.items) == doc_count - 7
+    assert lst3.items == [docs[i] for i in range(7, doc_count)]
+
+    lst4 = await repo.list_documents_meta(namespace, limit=3, cursor=docs[2].id)
+    assert isinstance(lst4, DocumentListSchema)
+    assert lst4.count == doc_count
+    assert len(lst4.items) == 3
+    assert lst4.items == [docs[i] for i in range(2, 5)]
 
     await repo.aclose()
