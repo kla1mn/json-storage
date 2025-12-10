@@ -43,4 +43,7 @@ class MultiRepositoryService:
         namespace: str,
         limit: int,
         cursor: str,
-    ) -> DocumentListSchema: ...
+    ) -> DocumentListSchema:
+        if namespace not in self.NAMESPACES:
+            return DocumentListSchema()
+        return await self.postgres_repository.list_documents_meta(namespace, limit=limit, cursor=cursor)

@@ -240,6 +240,7 @@ class PostgresDBRepository:
         self,
         namespace: str,
         limit: int | None = None,
+        cursor: str | None = None,
         offset: int | None = None,
     ) -> DocumentListSchema:
         pool = await self._get_pool()
@@ -257,11 +258,14 @@ class PostgresDBRepository:
                             created_at,
                             updated_at
                         from {}
-                        order by created_at desc
                         """
                     ).format(sql.Identifier(table)),
                 ]
                 params = []
+                if cursor is not None:
+                    query.append(sql.SQL('where id <= %s'))
+                    params.append(cursor)
+                query.append(sql.SQL('order by created_at'))
                 if limit is not None:
                     query.append(sql.SQL('limit %s'))
                     params.append(limit)
