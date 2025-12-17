@@ -1,32 +1,43 @@
 from typing import Any
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
-from starlette.responses import JSONResponse, Response
-from fastapi import APIRouter, Body, Query
+from starlette.responses import JSONResponse, Response, StreamingResponse
+from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
-from .schemas import DocumentListSchema
+from .schemas import DocumentListSchema, DocumentSchema
 from .services import MultiRepositoryService
 
 router = APIRouter(prefix='/ns', route_class=DishkaRoute)
 
 
-@router.get('/{namespace}/objects/{object_id}', response_model=dict[str, Any])
-async def get_object_by_id(
+@router.get("/{namespace}/objects/{object_id}/meta", response_model=DocumentSchema)
+async def get_object_meta(
     namespace: str,
     object_id: UUID,
     multi_repo: FromDishka[MultiRepositoryService],
-) -> JSONResponse:
-    return JSONResponse(content=await multi_repo.get_object_by_id(namespace, object_id))
+) -> DocumentSchema:
+    return await multi_repo.get_object_meta(namespace, object_id)
+
+
+@router.get("/{namespace}/objects/{object_id}/body")
+async def get_object_body(
+    namespace: str,
+    object_id: UUID,
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> StreamingResponse:
+    return await multi_repo.get_object_body(namespace, object_id)
 
 
 @router.post('/{namespace}/objects', response_model=UUID)
 async def create_object(
     namespace: str,
+    document_name: str,
+    request: Request,
     multi_repo: FromDishka[MultiRepositoryService],
-    data: dict[str, Any] = Body(..., description='JSON объект для создания'),
 ) -> JSONResponse:
-    return JSONResponse(content=await multi_repo.create_object(namespace, data))
+    object_id = await multi_repo.create_object_stream(namespace, request.stream(), document_name=document_name)
+    return JSONResponse(content=str(object_id))
 
 
 @router.delete('/{namespace}/objects/{object_id}', response_model=None)

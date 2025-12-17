@@ -7,18 +7,22 @@ from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepos
 from json_storage.services import MultiRepositoryService
 from json_storage.depends import provider
 
+
 @pytest_asyncio.fixture
 async def container() -> AsyncIterator[AsyncContainer]:
     async with get_container([provider]) as container:
         yield container
 
+
 @pytest_asyncio.fixture
 async def postgres_repo(container: AsyncContainer) -> PostgresDBRepository:
     return await container.get(PostgresDBRepository)
 
+
 @pytest_asyncio.fixture
 async def elasticsearch_repo(container: AsyncContainer) -> ElasticSearchDBRepository:
     return await container.get(ElasticSearchDBRepository)
+
 
 @pytest_asyncio.fixture
 async def multi_repository_service(container: AsyncContainer) -> MultiRepositoryService:
