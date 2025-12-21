@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "dishka>=1.7.2",
-    "elasticsearch>=8.15",
+    "elasticsearch>=8,<9",
     "fastapi>=0.120.4",
     "granian[reload]>=2.4.0",
     "psycopg[binary,pool]>=3.2.1",

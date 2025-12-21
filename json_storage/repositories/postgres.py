@@ -249,7 +249,7 @@ class PostgresDBRepository:
         async with pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 query = [
-                        sql.SQL(
+                    sql.SQL(
                         """
                         select id,
                             document_name,
@@ -273,7 +273,7 @@ class PostgresDBRepository:
                     query.append(sql.SQL('offset %s'))
                     params.append(offset)
                 await cur.execute(
-                    sql.SQL(" ").join(query),
+                    sql.SQL(' ').join(query),
                     params,
                 )
                 rows = await cur.fetchall()
