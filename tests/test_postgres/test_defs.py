@@ -1,4 +1,3 @@
-import os
 import uuid_extensions as uuid_ext
 import json
 
@@ -26,7 +25,7 @@ async def test_create_buffer_table():
             """
         )
         tables = {row[0] for row in cur.fetchall()}
-        assert "json_buffer" in tables
+        assert 'json_buffer' in tables
 
         cur.execute(
             """
@@ -39,21 +38,21 @@ async def test_create_buffer_table():
         )
         columns = {
             row[0]: {
-                "data_type": row[1],
-                "is_nullable": row[2],
+                'data_type': row[1],
+                'is_nullable': row[2],
             }
             for row in cur.fetchall()
         }
 
     await repo.aclose()
 
-    assert "id" in columns
-    assert columns["id"]["data_type"] == "uuid"
-    assert columns["id"]["is_nullable"] == "NO"
+    assert 'id' in columns
+    assert columns['id']['data_type'] == 'uuid'
+    assert columns['id']['is_nullable'] == 'NO'
 
-    assert "content" in columns
-    assert columns["content"]["data_type"] == "bytea"
-    assert columns["content"]["is_nullable"] == "NO"
+    assert 'content' in columns
+    assert columns['content']['data_type'] == 'bytea'
+    assert columns['content']['is_nullable'] == 'NO'
 
 
 @pytest.mark.asyncio
@@ -62,8 +61,8 @@ async def test_buffer_insert_and_get_and_delete_roundtrip():
     await repo.create_buffer_table()
 
     doc_id = str(uuid_ext.uuid7())
-    payload = {"a": 1, "b": "test"}
-    raw = json.dumps(payload).encode("utf-8")
+    payload = {'a': 1, 'b': 'test'}
+    raw = json.dumps(payload).encode('utf-8')
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
         cur.execute(
@@ -79,7 +78,7 @@ async def test_buffer_insert_and_get_and_delete_roundtrip():
     got = await repo.get_data_by_id(doc_id)
     assert got is not None
     assert got == raw
-    assert json.loads(got.decode("utf-8")) == payload
+    assert json.loads(got.decode('utf-8')) == payload
 
     # delete_data_by_id
     deleted = await repo.delete_data_by_id(doc_id)
@@ -95,8 +94,8 @@ async def test_buffer_insert_and_get_and_delete_roundtrip():
 @pytest.mark.asyncio
 async def test_create_and_drop_meta_table_by_namespace():
     repo = PostgresDBRepository(dsn=DSN)
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
-    table = f"{namespace}_metadata"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
+    table = f'{namespace}_metadata'
 
     # create
     await repo.create_meta_table_by_namespace(namespace)
@@ -134,12 +133,12 @@ async def test_create_document_writes_meta_and_buffer():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
 
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
-    table = f"{namespace}_metadata"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
+    table = f'{namespace}_metadata'
     await repo.create_meta_table_by_namespace(namespace)
 
-    payload = {"foo": "bar", "n": 42}
-    document_name = "doc-1"
+    payload = {'foo': 'bar', 'n': 42}
+    document_name = 'doc-1'
 
     doc = await repo.create_document(
         namespace=namespace,
@@ -150,7 +149,7 @@ async def test_create_document_writes_meta_and_buffer():
     assert isinstance(doc, DocumentSchema)
     assert doc.document_name == document_name
     assert doc.content_length == len(
-        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        json.dumps(payload, separators=(',', ':')).encode('utf-8')
     )
     assert isinstance(doc.content_hash, str)
     assert doc.id
@@ -180,7 +179,7 @@ async def test_create_document_writes_meta_and_buffer():
         buf_row = cur.fetchone()
         assert buf_row is not None
         raw = buf_row[0]
-        assert json.loads(bytes(raw).decode("utf-8")) == payload
+        assert json.loads(bytes(raw).decode('utf-8')) == payload
 
     await repo.aclose()
 
@@ -190,16 +189,16 @@ async def test_get_document_meta_returns_correct_schema():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
 
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
     await repo.create_meta_table_by_namespace(namespace)
 
-    payload = {"x": 123}
-    doc = await repo.create_document(namespace, "name-1", payload)
+    payload = {'x': 123}
+    doc = await repo.create_document(namespace, 'name-1', payload)
 
     fetched = await repo.get_document_meta(namespace, doc.id)
     assert isinstance(fetched, DocumentSchema)
     assert fetched.id == doc.id
-    assert fetched.document_name == "name-1"
+    assert fetched.document_name == 'name-1'
     assert fetched.content_length == doc.content_length
     assert fetched.content_hash == doc.content_hash
     assert fetched.created_at is not None
@@ -217,16 +216,16 @@ async def test_delete_document_meta():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
 
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
-    table = f"{namespace}_metadata"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
+    table = f'{namespace}_metadata'
     await repo.create_meta_table_by_namespace(namespace)
 
-    payload = {"x": "y"}
-    doc = await repo.create_document(namespace, "to-delete", payload)
+    payload = {'x': 'y'}
+    doc = await repo.create_document(namespace, 'to-delete', payload)
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
         cur.execute(
-            f"select count(*) from {table} where id = %s",
+            f'select count(*) from {table} where id = %s',
             (doc.id,),
         )
         (cnt_before,) = cur.fetchone()
@@ -237,7 +236,7 @@ async def test_delete_document_meta():
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
         cur.execute(
-            f"select count(*) from {table} where id = %s",
+            f'select count(*) from {table} where id = %s',
             (doc.id,),
         )
         (cnt_after,) = cur.fetchone()
@@ -254,16 +253,16 @@ async def test_list_documents_meta_offset_pagination_and_count():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
 
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
     await repo.create_meta_table_by_namespace(namespace)
 
-    payload = {"k": "v"}
+    payload = {'k': 'v'}
     docs = []
     for i in range(5):
         d = await repo.create_document(
             namespace,
-            f"name-{i}",
-            {**payload, "idx": i},
+            f'name-{i}',
+            {**payload, 'idx': i},
         )
         docs.append(d)
 
@@ -273,7 +272,7 @@ async def test_list_documents_meta_offset_pagination_and_count():
     assert len(lst.items) == 3
 
     names = [it.document_name for it in lst.items]
-    assert names == ["name-4", "name-3", "name-2"]
+    assert names == ['name-4', 'name-3', 'name-2']
 
     lst2 = await repo.list_documents_meta(namespace, limit=3, offset=2)
     assert lst2.count == 5
@@ -286,20 +285,20 @@ async def test_list_documents_meta_offset_pagination_and_count():
 async def test_list_documents_meta_cursor_pagination_and_count():
     repo = PostgresDBRepository(dsn=DSN)
     await repo.create_buffer_table()
-    namespace = f"ns_{uuid_ext.uuid7().hex[:8]}"
+    namespace = f'ns_{uuid_ext.uuid7().hex[:8]}'
     await repo.create_meta_table_by_namespace(namespace)
-    payload = {"k": "v"}
+    payload = {'k': 'v'}
     docs = []
     doc_count = 10
     for i in range(doc_count):
         d = await repo.create_document(
             namespace,
-            f"name-{i}",
-            {**payload, "idx": i},
+            f'name-{i}',
+            {**payload, 'idx': i},
         )
         docs.append(d)
     docs.reverse()
-    
+
     lst1 = await repo.list_documents_meta(namespace)
     assert isinstance(lst1, DocumentListSchema)
     assert lst1.count == doc_count
