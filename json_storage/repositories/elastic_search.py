@@ -13,7 +13,6 @@ JSONType = dict[str, Any]
 @dataclass
 class ElasticSearchDBRepository:
     url: str = 'http://localhost:9200'
-
     _client: AsyncElasticsearch | None = field(init=False, default=None)
 
     async def _get_client(self) -> AsyncElasticsearch:
@@ -26,7 +25,19 @@ class ElasticSearchDBRepository:
             await self._client.close()
             self._client = None
 
-    async def index_document(
+    async def create_index(self, index: str) -> None:
+        client = await self._get_client()
+        if not await client.indices.exists(index=index):
+            await client.indices.create(index=index)
+
+    async def delete_index(self, index: str) -> None:
+        client = await self._get_client()
+        try:
+            await client.indices.delete(index=index)
+        except NotFoundError:
+            pass
+
+    async def insert_document(
         self,
         index: str,
         doc_id: str,
@@ -40,9 +51,7 @@ class ElasticSearchDBRepository:
             document=document,
             refresh=refresh,
         )
-
-        body = getattr(resp, 'body', resp)
-        result = body.get('result')
+        result = resp.get('result')
         return result in ('created', 'updated')
 
     async def get_document(
@@ -55,9 +64,7 @@ class ElasticSearchDBRepository:
             resp = await client.get(index=index, id=doc_id)
         except NotFoundError:
             return None
-
-        body = getattr(resp, 'body', resp)
-        return body.get('_source')
+        return resp.get('_source')
 
     async def delete_document(
         self,
@@ -74,6 +81,4 @@ class ElasticSearchDBRepository:
             )
         except NotFoundError:
             return False
-
-        body = getattr(resp, 'body', resp)
-        return body.get('result') == 'deleted'
+        return resp.get('result') == 'deleted'
