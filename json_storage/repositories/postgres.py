@@ -414,3 +414,40 @@ class PostgresDBRepository:
         ]
 
         return DocumentListSchema(items=items, count=total_row['cnt'])
+
+    async def delete_object_by_id(self, namespace: str, doc_id: str) -> bool:
+        pool = await self._get_pool()
+        table = namespace + '_metadata'
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        sql.SQL(
+                            """
+                            delete
+                            from {}
+                            where id = %s
+                            """
+                        ).format(sql.Identifier(table)),
+                        (uid,),
+                    )
+                    meta_deleted = cur.rowcount
+
+                    await cur.execute(
+                        """
+                        delete
+                        from json_chunks
+                        where id = %s
+                        """,
+                        (uid,),
+                    )
+                    chunks_deleted = cur.rowcount
+
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
+
+        return (meta_deleted > 0) and (chunks_deleted > 0)

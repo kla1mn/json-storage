@@ -21,7 +21,7 @@ async def test_iter_chunks_by_id_stream_hash_and_len():
     namespace = f'ns_{uuid_extensions.uuid7().hex[:8]}'
     await repo.create_meta_table_by_namespace(namespace)
 
-    raw = (b'{"k":"' + b"x" * (2 * 1024 * 1024) + b'"}')
+    raw = b'{"k":"' + b'x' * (2 * 1024 * 1024) + b'"}'
     expected_hash = hashlib.sha256(raw).hexdigest()
     expected_len = len(raw)
 

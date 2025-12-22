@@ -68,9 +68,8 @@ class MultiRepositoryService:
         )
         return uuid.UUID(doc.id)
 
-    async def delete_object_by_id(
-        self, namespace: str, object_id: UUID
-    ) -> None: ...  # TODO: taskiq
+    async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
+        await self.postgres_repository.delete_object_by_id(namespace, str(object_id))
 
     async def set_search_schema(
         self,
