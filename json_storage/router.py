@@ -5,6 +5,7 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
+from tests.fixtures.db import multi_repository_service
 from .schemas import DocumentListSchema, DocumentSchema
 from .services import MultiRepositoryService
 
@@ -95,3 +96,9 @@ async def list_objects(
 ) -> JSONResponse:
     content = await multi_repo.read_limit_namespace(namespace, limit, cursor)
     return JSONResponse(content=content)
+
+
+@router.get('/get_namespaces', response_model=list[str])
+async def get_namespaces(multi_repo: FromDishka[MultiRepositoryService],) -> JSONResponse:
+    namespaces = await multi_repo.get_namespace()
+    return JSONResponse(content=namespaces)
