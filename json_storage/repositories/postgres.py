@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -47,6 +48,120 @@ class PostgresDBRepository:
                     """
                 )
             await conn.commit()
+
+    async def create_chunks_table(self) -> None:
+        pool = await self._get_pool()
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    create table if not exists json_chunks (
+                        id uuid not null,
+                        part integer not null,
+                        data bytea not null,
+                        primary key (id, part)
+                    );
+                    """
+                )
+            await conn.commit()
+
+    async def iter_chunks_by_id(self, doc_id: str) -> AsyncGenerator[bytes, None]:
+        pool = await self._get_pool()
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    select data
+                    from json_chunks
+                    where id = %s
+                    order by part
+                    """,
+                    (uid,),
+                )
+                async for row in cur:
+                    (data,) = row
+                    yield bytes(data)
+
+    async def create_document_stream(
+        self,
+        namespace: str,
+        document_name: str,
+        body: AsyncIterator[bytes],
+        *,
+        max_batch_bytes: int = 1024 * 1024,
+    ) -> DocumentSchema:
+        pool = await self._get_pool()
+        table = namespace + '_metadata'
+
+        doc_id = uuid_extensions.uuid7()
+        hasher = hashlib.sha256()
+        total = 0
+        part = 0
+        batch: list[tuple[uuid.UUID, int, bytes]] = []
+        batch_bytes = 0
+
+        async with pool.connection() as conn:
+            try:
+                async with conn.cursor() as cur:
+                    async for chunk in body:
+                        if not chunk:
+                            continue
+                        b = bytes(chunk)
+                        total += len(b)
+                        hasher.update(b)
+                        batch.append((doc_id, part, b))
+                        batch_bytes += len(b)
+                        part += 1
+
+                        if batch_bytes >= max_batch_bytes:
+                            await cur.executemany(
+                                """
+                                insert into json_chunks (id, part, data)
+                                values (%s, %s, %s)
+                                """,
+                                batch,
+                            )
+                            batch.clear()
+                            batch_bytes = 0
+
+                    if batch:
+                        await cur.executemany(
+                            """
+                            insert into json_chunks (id, part, data)
+                            values (%s, %s, %s)
+                            """,
+                            batch,
+                        )
+
+                    content_hash = hasher.hexdigest()
+
+                    await cur.execute(
+                        sql.SQL(
+                            """
+                            insert into {} (id, document_name, content_length, content_hash)
+                            values (%s, %s, %s, %s)
+                            returning created_at, updated_at
+                            """
+                        ).format(sql.Identifier(table)),
+                        (doc_id, document_name, total, content_hash),
+                    )
+                    created_at, updated_at = await cur.fetchone()
+
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
+
+        return DocumentSchema(
+            id=str(doc_id),
+            document_name=document_name,
+            created_at=created_at,
+            updated_at=updated_at,
+            content_length=total,
+            content_hash=content_hash,
+        )
 
     async def get_data_by_id(self, doc_id: str) -> Optional[bytes]:
         pool = await self._get_pool()
@@ -265,7 +380,7 @@ class PostgresDBRepository:
                 if cursor is not None:
                     query.append(sql.SQL('where id <= %s'))
                     params.append(cursor)
-                query.append(sql.SQL('order by created_at'))
+                query.append(sql.SQL('order by created_at desc'))
                 if limit is not None:
                     query.append(sql.SQL('limit %s'))
                     params.append(limit)
@@ -299,3 +414,40 @@ class PostgresDBRepository:
         ]
 
         return DocumentListSchema(items=items, count=total_row['cnt'])
+
+    async def delete_object_by_id(self, namespace: str, doc_id: str) -> bool:
+        pool = await self._get_pool()
+        table = namespace + '_metadata'
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            try:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        sql.SQL(
+                            """
+                            delete
+                            from {}
+                            where id = %s
+                            """
+                        ).format(sql.Identifier(table)),
+                        (uid,),
+                    )
+                    meta_deleted = cur.rowcount
+
+                    await cur.execute(
+                        """
+                        delete
+                        from json_chunks
+                        where id = %s
+                        """,
+                        (uid,),
+                    )
+                    chunks_deleted = cur.rowcount
+
+                await conn.commit()
+            except Exception:
+                await conn.rollback()
+                raise
+
+        return (meta_deleted > 0) and (chunks_deleted > 0)

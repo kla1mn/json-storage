@@ -10,7 +10,7 @@ class DataBaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
     @staticmethod
     def get_postgres_db() -> PostgresDBRepository:
-        return PostgresDBRepository(dsn=settings.elastic_search.dsn)
+        return PostgresDBRepository(dsn=settings.postgres.dsn)
 
     @provide(scope=Scope.REQUEST)
     @staticmethod
