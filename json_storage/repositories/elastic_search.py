@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from elasticsearch import AsyncElasticsearch
-from elasticsearch import NotFoundError
+from elasticsearch import AsyncElasticsearch, NotFoundError
 
 
 JSONType = dict[str, Any]
+MappingsType = dict[str, Any]
 
 
 @dataclass
@@ -25,10 +25,25 @@ class ElasticSearchDBRepository:
             await self._client.close()
             self._client = None
 
-    async def create_index(self, index: str) -> None:
+    async def create_index(
+        self,
+        index: str,
+        mappings: MappingsType | None = None,
+    ) -> None:
         client = await self._get_client()
-        if not await client.indices.exists(index=index):
-            await client.indices.create(index=index)
+
+        exists = await client.indices.exists(index=index)
+        if exists.body is True:
+            return
+
+        body: dict[str, Any] = {}
+        if mappings is not None:
+            body['mappings'] = mappings
+
+        await client.indices.create(
+            index=index,
+            **body,
+        )
 
     async def delete_index(self, index: str) -> None:
         client = await self._get_client()
@@ -51,8 +66,7 @@ class ElasticSearchDBRepository:
             document=document,
             refresh=refresh,
         )
-        result = resp.get('result')
-        return result in ('created', 'updated')
+        return resp.get('result') in ('created', 'updated')
 
     async def get_document(
         self,
