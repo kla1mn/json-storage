@@ -31,16 +31,16 @@ class JSONPathParser:
 
         segments: list[PathSegment] = []
 
-        token_re = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$")
+        token_re = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$')
 
-        for raw in inner.split("."):
+        for raw in inner.split('.'):
             raw = raw.strip()
             if not raw:
-                raise ValueError(f"Empty path segment in {json_path!r}")
+                raise ValueError(f'Empty path segment in {json_path!r}')
 
             m = token_re.match(raw)
             if not m:
-                raise ValueError(f"Unsupported JSONPath segment: {raw!r}")
+                raise ValueError(f'Unsupported JSONPath segment: {raw!r}')
 
             name, array_marker = m.group(1), m.group(2)
             segments.append(PathSegment(name=name, is_array=bool(array_marker)))
