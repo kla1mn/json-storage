@@ -95,3 +95,6 @@ class MultiRepositoryService:
         return await self.postgres_repository.list_documents_meta(
             namespace, limit=limit, cursor=cursor
         )
+
+    async def get_namespace(self) -> list[str]:
+        return sorted(list(self.NAMESPACES))
