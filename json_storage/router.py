@@ -11,7 +11,7 @@ from .services import MultiRepositoryService
 router = APIRouter(prefix='/ns', route_class=DishkaRoute)
 
 
-@router.get('/{namespace}/objects/{object_id}/meta', response_model=DocumentSchema)
+@router.get('/{namespace}/objects/{id}/meta', response_model=DocumentSchema)
 async def get_object_meta(
     namespace: str,
     object_id: UUID,
@@ -20,7 +20,7 @@ async def get_object_meta(
     return await multi_repo.get_object_meta(namespace, object_id)
 
 
-@router.get('/{namespace}/objects/{object_id}/body')
+@router.get('/{namespace}/objects/{id}/body')
 async def get_object_body(
     namespace: str,
     object_id: UUID,

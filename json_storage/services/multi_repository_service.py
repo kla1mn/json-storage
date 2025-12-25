@@ -45,10 +45,6 @@ class MultiRepositoryService:
 
         return StreamingResponse(gen(), media_type='application/json', headers=headers)
 
-    async def create_object(
-        self, namespace: str, data: JSONType
-    ) -> UUID: ...  # TODO: taskiq
-
     async def create_object_stream(
         self,
         namespace: str,
@@ -56,10 +52,10 @@ class MultiRepositoryService:
         *,
         document_name: str,
     ) -> UUID:
-        await self.postgres_repository.create_chunks_table()
-        await self.postgres_repository.create_meta_table_by_namespace(namespace)
-
-        self.NAMESPACES.add(namespace)
+        if namespace not in self.NAMESPACES:
+            self.NAMESPACES.add(namespace)
+            await self.postgres_repository.create_chunks_table()
+            await self.postgres_repository.create_meta_table_by_namespace(namespace)
 
         doc = await self.postgres_repository.create_document_stream(
             namespace=namespace,
@@ -67,6 +63,7 @@ class MultiRepositoryService:
             body=body,
         )
         return uuid.UUID(doc.id)
+
 
     async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
         await self.postgres_repository.delete_object_by_id(namespace, str(object_id))
