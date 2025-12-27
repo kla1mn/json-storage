@@ -67,8 +67,10 @@ async def set_search_schema(
 async def search_objects(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
+    filters: dict[str, Any] = Body(..., description='Фильтры поиска'),
 ) -> JSONResponse:
-    return JSONResponse(content=await multi_repo.search_objects(namespace))
+    result = await multi_repo.search_objects(namespace, filters)
+    return JSONResponse(content=result)
 
 
 @router.get('/{namespace}', response_model=DocumentListSchema)
