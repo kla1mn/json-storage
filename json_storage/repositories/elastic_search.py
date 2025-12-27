@@ -96,3 +96,10 @@ class ElasticSearchDBRepository:
         except NotFoundError:
             return False
         return resp.get('result') == 'deleted'
+
+    async def search_in_index(
+        self, index: str, body: dict, size: int = 10, from_: int = 0
+    ) -> JSONType:
+        client = await self._get_client()
+        resp = await client.search(index=index, body=body, size=size, from_=from_)
+        return resp.body

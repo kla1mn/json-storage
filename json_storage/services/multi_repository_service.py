@@ -6,7 +6,8 @@ from dataclasses import dataclass
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
-
+from .dsl_translator import DSLTranslator
+from .jsonpath_parser import JSONPathParser
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
 from json_storage.schemas import DocumentListSchema, DocumentSchema
 
@@ -71,10 +72,58 @@ class MultiRepositoryService:
     async def set_search_schema(
         self,
         namespace: str,
-        search_schema: JSONType,
-    ) -> None: ...
+        search_schema: dict[str, Any],
+    ) -> None:
+        index_name = f'{namespace}'
+        self.SEARCH_SCHEMAS[namespace] = search_schema
+        mapping = DSLTranslator.schema_to_es_mapping(search_schema)['mappings']
+        await self.elastic_repository.create_index(
+            index=index_name,
+            mappings=mapping,
+        )
 
-    async def search_objects(self, namespace: str) -> list[JSONType]: ...
+    async def search_objects(
+        self,
+        namespace: str,
+        filters: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        schema = self.SEARCH_SCHEMAS.get(namespace)
+        if not schema:
+            raise HTTPException(400, 'Search schema not set')
+
+        nested_groups: dict[str, list[dict]] = {}
+        must: list[dict] = []
+
+        for logical_name, value in filters.items():
+            if logical_name not in schema:
+                raise HTTPException(400, f'Unknown field: {logical_name}')
+
+            jsonpath = schema[logical_name]
+            segments = JSONPathParser.parse_json_path(jsonpath)
+            es_path = DSLTranslator.to_es_path(segments)
+
+            term = {'term': {es_path.field: value}}
+
+            if es_path.is_nested:
+                nested_groups.setdefault(es_path.nested_path, []).append(term)
+            else:
+                must.append(term)
+
+        for path, terms in nested_groups.items():
+            must.append({'nested': {'path': path, 'query': {'bool': {'must': terms}}}})
+
+        query = (
+            {'query': {'bool': {'must': must}}}
+            if must
+            else {'query': {'match_all': {}}}
+        )
+
+        resp = await self.elastic_repository.search_in_index(
+            index=f'{namespace}',
+            body=query,
+        )
+
+        return [hit['_source'] for hit in resp['hits']['hits']]
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if namespace not in self.NAMESPACES:
