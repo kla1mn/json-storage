@@ -1,18 +1,17 @@
 from typing import Any
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse, Response
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
-from tests.fixtures.db import multi_repository_service
 from .schemas import DocumentListSchema, DocumentSchema
 from .services import MultiRepositoryService
 
 router = APIRouter(prefix='/ns', route_class=DishkaRoute)
 
 
-@router.get('/{namespace}/objects/{id}/meta', response_model=DocumentSchema)
+@router.get('/{namespace}/objects/{object_id}/meta', response_model=DocumentSchema)
 async def get_object_meta(
     namespace: str,
     object_id: UUID,
@@ -21,12 +20,12 @@ async def get_object_meta(
     return await multi_repo.get_object_meta(namespace, object_id)
 
 
-@router.get('/{namespace}/objects/{id}/body')
+@router.get('/{namespace}/objects/{object_id}/body')
 async def get_object_body(
     namespace: str,
     object_id: UUID,
     multi_repo: FromDishka[MultiRepositoryService],
-) -> StreamingResponse:
+) -> dict[str, Any]:
     return await multi_repo.get_object_body(namespace, object_id)
 
 
@@ -67,8 +66,10 @@ async def set_search_schema(
 async def search_objects(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
+    filters: str = Body(..., description='Фильтры поиска'),
 ) -> JSONResponse:
-    return JSONResponse(content=await multi_repo.search_objects(namespace))
+    result = await multi_repo.search_objects(namespace, filters)
+    return JSONResponse(content=result)
 
 
 @router.get('/{namespace}', response_model=DocumentListSchema)
@@ -99,6 +100,8 @@ async def list_objects(
 
 
 @router.get('/get_namespaces', response_model=list[str])
-async def get_namespaces(multi_repo: FromDishka[MultiRepositoryService],) -> JSONResponse:
+async def get_namespaces(
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> JSONResponse:
     namespaces = await multi_repo.get_namespace()
     return JSONResponse(content=namespaces)

@@ -115,25 +115,23 @@ def test_build_query_simple_eq():
     query = DSLTranslator.build_query_from_expression('$.status == "paid"')
 
     assert query == {
-        "query": {
-            "term": {
-                "status": "paid",
+        'query': {
+            'term': {
+                'status': 'paid',
             }
         }
     }
 
 
 def test_build_query_numeric_range_and():
-    query = DSLTranslator.build_query_from_expression(
-        "$.price > 10 && $.price <= 20"
-    )
+    query = DSLTranslator.build_query_from_expression('$.price > 10 && $.price <= 20')
 
     assert query == {
-        "query": {
-            "bool": {
-                "must": [
-                    {"range": {"price": {"gt": 10}}},
-                    {"range": {"price": {"lte": 20}}},
+        'query': {
+            'bool': {
+                'must': [
+                    {'range': {'price': {'gt': 10}}},
+                    {'range': {'price': {'lte': 20}}},
                 ]
             }
         }
@@ -141,17 +139,15 @@ def test_build_query_numeric_range_and():
 
 
 def test_build_query_nested_term():
-    query = DSLTranslator.build_query_from_expression(
-        '$.items[*].productId == "A1"'
-    )
+    query = DSLTranslator.build_query_from_expression('$.items[*].productId == "A1"')
 
     assert query == {
-        "query": {
-            "nested": {
-                "path": "items",
-                "query": {
-                    "term": {
-                        "items.productId": "A1",
+        'query': {
+            'nested': {
+                'path': 'items',
+                'query': {
+                    'term': {
+                        'items.productId': 'A1',
                     }
                 },
             }
@@ -165,32 +161,22 @@ def test_build_query_or():
     )
 
     assert query == {
-        "query": {
-            "bool": {
-                "should": [
-                    {"term": {"status": "paid"}},
-                    {"term": {"status": "pending"}},
+        'query': {
+            'bool': {
+                'should': [
+                    {'term': {'status': 'paid'}},
+                    {'term': {'status': 'pending'}},
                 ],
-                "minimum_should_match": 1,
+                'minimum_should_match': 1,
             }
         }
     }
 
 
 def test_build_query_not_with_neq():
-    query = DSLTranslator.build_query_from_expression(
-        '$.status != "paid"'
-    )
+    query = DSLTranslator.build_query_from_expression('$.status != "paid"')
 
-    assert query == {
-        "query": {
-            "bool": {
-                "must_not": [
-                    {"term": {"status": "paid"}}
-                ]
-            }
-        }
-    }
+    assert query == {'query': {'bool': {'must_not': [{'term': {'status': 'paid'}}]}}}
 
 
 def test_build_query_grouped_and_or():
@@ -199,20 +185,20 @@ def test_build_query_grouped_and_or():
     )
 
     assert query == {
-        "query": {
-            "bool": {
-                "should": [
+        'query': {
+            'bool': {
+                'should': [
                     {
-                        "bool": {
-                            "must": [
-                                {"range": {"price": {"gt": 10}}},
-                                {"range": {"price": {"lte": 20}}},
+                        'bool': {
+                            'must': [
+                                {'range': {'price': {'gt': 10}}},
+                                {'range': {'price': {'lte': 20}}},
                             ]
                         }
                     },
-                    {"term": {"status": "paid"}},
+                    {'term': {'status': 'paid'}},
                 ],
-                "minimum_should_match": 1,
+                'minimum_should_match': 1,
             }
         }
     }

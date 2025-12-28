@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, ClassVar, TypeVar
 from uuid import UUID
 from collections.abc import AsyncIterator
@@ -5,8 +6,7 @@ import uuid
 from dataclasses import dataclass
 
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
-
+from .dsl_translator import DSLTranslator
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
 from json_storage.schemas import DocumentListSchema, DocumentSchema
 
@@ -28,22 +28,17 @@ class MultiRepositoryService:
             raise HTTPException(status_code=404)
         return meta
 
-    async def get_object_body(
-        self, namespace: str, object_id: UUID
-    ) -> StreamingResponse:
-        meta = await self.get_object_meta(namespace, object_id)
+    async def get_object_body(self, namespace: str, object_id: UUID) -> dict[str, Any]:
+        await self.get_object_meta(namespace, object_id)
 
-        async def gen() -> AsyncIterator[bytes]:
-            async for chunk in self.postgres_repository.iter_chunks_by_id(
-                str(object_id)
-            ):
-                yield chunk
+        doc = await self.elastic_repository.get_document(
+            index=namespace,
+            doc_id=str(object_id),
+        )
+        if doc is None:
+            raise HTTPException(status_code=202, detail='Документ ещё индексируется')
 
-        headers = {
-            'Content-Length': str(meta.content_length),
-        }
-
-        return StreamingResponse(gen(), media_type='application/json', headers=headers)
+        return doc
 
     async def create_object_stream(
         self,
@@ -62,19 +57,45 @@ class MultiRepositoryService:
             document_name=document_name,
             body=body,
         )
+
+        from json_storage.tasks import index_document_to_elastic
+
+        await index_document_to_elastic.kiq(namespace=namespace, object_id=doc.id)
+
         return uuid.UUID(doc.id)
 
-
     async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
-        await self.postgres_repository.delete_object_by_id(namespace, str(object_id))
+        await asyncio.gather(
+            self.postgres_repository.delete_object_by_id(namespace, str(object_id)),
+            self.elastic_repository.delete_document(namespace, str(object_id)),
+        )
 
     async def set_search_schema(
         self,
         namespace: str,
-        search_schema: JSONType,
-    ) -> None: ...
+        search_schema: dict[str, Any],
+    ) -> None:
+        self.SEARCH_SCHEMAS[namespace] = search_schema
+        mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+        await self.elastic_repository.create_or_update_index(
+            index=namespace,
+            mappings=mapping,
+        )
 
-    async def search_objects(self, namespace: str) -> list[JSONType]: ...
+    async def search_objects(
+        self, namespace: str, filters: str
+    ) -> list[dict[str, Any]]:
+        schema = self.SEARCH_SCHEMAS.get(namespace)
+        if not schema:
+            raise HTTPException(400, 'Search schema not set')
+        query = DSLTranslator.build_query_from_expression(filters)
+
+        resp = await self.elastic_repository.search_in_index(
+            index=namespace,
+            body=query,
+        )
+
+        return resp
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if namespace not in self.NAMESPACES:
