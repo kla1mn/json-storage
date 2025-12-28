@@ -27,12 +27,12 @@ class ElasticSearchDBRepository:
             self._client = None
 
     async def create_or_update_index(
-            self,
-            index: str,
-            mappings: MappingsType,
-            *,
-            wait_for_completion: bool = True,
-            reindex_conflicts: str = 'proceed',
+        self,
+        index: str,
+        mappings: MappingsType,
+        *,
+        wait_for_completion: bool = True,
+        reindex_conflicts: str = 'proceed',
     ) -> str:
         """
         Попытка:
@@ -65,7 +65,11 @@ class ElasticSearchDBRepository:
         try:
             alias_info = await client.indices.get_alias(name=index)
             # Если index - это алиас, получаем список реальных индексов
-            old_indices = list(alias_info.body.keys()) if hasattr(alias_info, 'body') else list(alias_info.keys())
+            old_indices = (
+                list(alias_info.body.keys())
+                if hasattr(alias_info, 'body')
+                else list(alias_info.keys())
+            )
         except NotFoundError:
             # Это реальный индекс без алиаса (старая схема)
             # Нужно мигрировать: создать новый индекс и алиас

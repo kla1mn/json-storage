@@ -1,7 +1,7 @@
 from typing import Any
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse, Response
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 

@@ -58,6 +58,7 @@ class MultiRepositoryService:
         )
 
         from json_storage.tasks import index_document_to_elastic
+
         await index_document_to_elastic.kiq(namespace=namespace, object_id=doc.id)
 
         return uuid.UUID(doc.id)

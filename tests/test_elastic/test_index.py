@@ -17,7 +17,7 @@ def mappings_for_test():
 
 @pytest.mark.asyncio
 async def test_create_or_update_index_with_mappings(
-        elasticsearch_repo, es_client, index_for_test, mappings_for_test
+    elasticsearch_repo, es_client, index_for_test, mappings_for_test
 ):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
@@ -169,9 +169,7 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
             },
         },
     }
-    second_create = await elasticsearch_repo.create_or_update_index(
-        index_for_test, second_mappings
-    )
+    await elasticsearch_repo.create_or_update_index(index_for_test, second_mappings)
     body_for_search_second = {'query': {'term': {'mau': 44}}}
     docs = await elasticsearch_repo.search_in_index(
         index_for_test, body_for_search_second

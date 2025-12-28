@@ -1,5 +1,6 @@
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
+from json_storage.services.multi_repository_service import MultiRepositoryService
 
 from json_storage.settings import settings
 import psycopg
@@ -9,8 +10,6 @@ DSN = settings.postgres.dsn
 
 pytest_plugins = ('tests.fixtures.db', 'tests.fixtures.taskiq')
 
-
-from json_storage.services.multi_repository_service import MultiRepositoryService
 
 @pytest.fixture(autouse=True)
 def cleanup_postgres_after_test():
