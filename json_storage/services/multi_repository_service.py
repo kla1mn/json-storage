@@ -5,7 +5,6 @@ import uuid
 from dataclasses import dataclass
 
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 from .dsl_translator import DSLTranslator
 from .jsonpath_parser import JSONPathParser
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
@@ -29,22 +28,8 @@ class MultiRepositoryService:
             raise HTTPException(status_code=404)
         return meta
 
-    async def get_object_body(
-        self, namespace: str, object_id: UUID
-    ) -> StreamingResponse:
-        meta = await self.get_object_meta(namespace, object_id)
-
-        async def gen() -> AsyncIterator[bytes]:
-            async for chunk in self.postgres_repository.iter_chunks_by_id(
-                str(object_id)
-            ):
-                yield chunk
-
-        headers = {
-            'Content-Length': str(meta.content_length),
-        }
-
-        return StreamingResponse(gen(), media_type='application/json', headers=headers)
+    async def get_object_body(self, namespace: str, object_id: UUID) -> JSONType | None:
+        return await self.elastic_repository.get_document(namespace, str(object_id))
 
     async def create_object_stream(
         self,
@@ -73,11 +58,10 @@ class MultiRepositoryService:
         namespace: str,
         search_schema: dict[str, Any],
     ) -> None:
-        index_name = f'{namespace}'
         self.SEARCH_SCHEMAS[namespace] = search_schema
-        mapping = DSLTranslator.schema_to_es_mapping(search_schema)['mappings']
-        await self.elastic_repository.create_index(
-            index=index_name,
+        mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+        await self.elastic_repository.create_or_update_index(
+            index=namespace,
             mappings=mapping,
         )
 
@@ -118,11 +102,11 @@ class MultiRepositoryService:
         )
 
         resp = await self.elastic_repository.search_in_index(
-            index=f'{namespace}',
+            index=namespace,
             body=query,
         )
 
-        return [hit['_source'] for hit in resp['hits']['hits']]
+        return resp
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if namespace not in self.NAMESPACES:
