@@ -1,9 +1,14 @@
 from typing import Any, ClassVar, TypeVar
 from uuid import UUID
+from collections.abc import AsyncIterator
+import uuid
 from dataclasses import dataclass
 
+from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
+
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
-from json_storage.schemas import DocumentListSchema
+from json_storage.schemas import DocumentListSchema, DocumentSchema
 
 JSONType = TypeVar('JSONType', bound=dict[str, Any])
 
@@ -15,15 +20,53 @@ class MultiRepositoryService:
     postgres_repository: PostgresDBRepository
     elastic_repository: ElasticSearchDBRepository
 
-    async def get_object_by_id(self, namespace: str, object_id: UUID) -> JSONType: ...
+    async def get_object_meta(self, namespace: str, object_id: UUID) -> DocumentSchema:
+        meta = await self.postgres_repository.get_document_meta(
+            namespace, str(object_id)
+        )
+        if meta is None:
+            raise HTTPException(status_code=404)
+        return meta
 
-    async def create_object(
-        self, namespace: str, data: JSONType
-    ) -> UUID: ...  # TODO: taskiq
-
-    async def delete_object_by_id(
+    async def get_object_body(
         self, namespace: str, object_id: UUID
-    ) -> None: ...  # TODO: taskiq
+    ) -> StreamingResponse:
+        meta = await self.get_object_meta(namespace, object_id)
+
+        async def gen() -> AsyncIterator[bytes]:
+            async for chunk in self.postgres_repository.iter_chunks_by_id(
+                str(object_id)
+            ):
+                yield chunk
+
+        headers = {
+            'Content-Length': str(meta.content_length),
+        }
+
+        return StreamingResponse(gen(), media_type='application/json', headers=headers)
+
+    async def create_object_stream(
+        self,
+        namespace: str,
+        body: AsyncIterator[bytes],
+        *,
+        document_name: str,
+    ) -> UUID:
+        if namespace not in self.NAMESPACES:
+            self.NAMESPACES.add(namespace)
+            await self.postgres_repository.create_chunks_table()
+            await self.postgres_repository.create_meta_table_by_namespace(namespace)
+
+        doc = await self.postgres_repository.create_document_stream(
+            namespace=namespace,
+            document_name=document_name,
+            body=body,
+        )
+        return uuid.UUID(doc.id)
+
+
+    async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
+        await self.postgres_repository.delete_object_by_id(namespace, str(object_id))
 
     async def set_search_schema(
         self,
@@ -49,3 +92,6 @@ class MultiRepositoryService:
         return await self.postgres_repository.list_documents_meta(
             namespace, limit=limit, cursor=cursor
         )
+
+    async def get_namespace(self) -> list[str]:
+        return sorted(list(self.NAMESPACES))

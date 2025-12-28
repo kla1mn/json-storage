@@ -16,7 +16,8 @@ def cleanup_db_after_test():
     # код после yield выполняется после теста
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
-        cur.execute('truncate table json_buffer restart identity cascade;')
+        cur.execute('drop table if exists json_buffer cascade;')
+        cur.execute('drop table if exists json_chunks cascade;')
 
         cur.execute(
             """

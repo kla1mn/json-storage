@@ -51,10 +51,10 @@ class DSLTranslator:
                                      is_nested=True, nested_path="order.items"
         """
         if not segments:
-            raise ValueError("Empty segments list is not a valid field path")
+            raise ValueError('Empty segments list is not a valid field path')
 
         names = [s.name for s in segments]
-        field = ".".join(names)
+        field = '.'.join(names)
 
         array_first = next((i for i, s in enumerate(segments) if s.is_array), None)
 
@@ -64,14 +64,15 @@ class DSLTranslator:
         if len(segments) == 1:
             return EsPath(field=field, is_nested=False, nested_path=None)
 
-        nested_path = ".".join(names[: array_first + 1])
+        nested_path = '.'.join(names[: array_first + 1])
         return EsPath(field=field, is_nested=True, nested_path=nested_path)
-
 
     @staticmethod
     def schema_to_es_mapping(search_schema: dict[str, str]) -> dict:
         properties: dict = {}
-        nested_props: dict[str, dict] = defaultdict(lambda: {"type": "nested", "properties": {}})
+        nested_props: dict[str, dict] = defaultdict(
+            lambda: {'type': 'nested', 'properties': {}}
+        )
 
         for logical_name, json_path in search_schema.items():
             segments: list[PathSegment] = JSONPathParser.parse_json_path(json_path)
@@ -82,7 +83,7 @@ class DSLTranslator:
                 inner_name = es_path.field[len(nested_path) + 1:]
                 nested_props[nested_path]["properties"][inner_name] = {"type": "keyword"}
             else:
-                properties[es_path.field] = {"type": "keyword"}
+                properties[es_path.field] = {'type': 'keyword'}
 
         for nested_path, nested_def in nested_props.items():
             properties[nested_path] = nested_def
