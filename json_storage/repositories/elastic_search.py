@@ -29,7 +29,7 @@ class ElasticSearchDBRepository:
     async def create_or_update_index(
         self,
         index: str,
-        mappings: MappingsType,
+        mappings: MappingsType | None = None,
         *,
         wait_for_completion: bool = True,
         reindex_conflicts: str = 'proceed',
@@ -40,6 +40,13 @@ class ElasticSearchDBRepository:
           2) создаём новый индекс, реиндексим документы и атомарно переключаем алиас.
              Возвращаем имя нового индекса.
         """
+        if mappings is None:
+            mappings = {
+                "mappings": {
+                    "dynamic": True,
+                    "properties": {}
+                }
+            }
         client = await self._get_client()
 
         async def _exists(idx: str) -> bool:
