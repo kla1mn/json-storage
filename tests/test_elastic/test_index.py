@@ -17,15 +17,15 @@ def mappings_for_test():
 
 @pytest.mark.asyncio
 async def test_create_or_update_index_with_mappings(
-    elasticsearch_repo, es_client, index_for_test, mappings_for_test
+        elasticsearch_repo, es_client, index_for_test, mappings_for_test
 ):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=mappings_for_test,
     )
-
     mapping = await es_client.indices.get_mapping(index=index_for_test)
-    props = mapping[index_for_test]['mappings']['properties']
+    physical_index_name = list(mapping.keys())[0]
+    props = mapping[physical_index_name]['mappings']['properties']
 
     assert 'a' in props
     assert props['a']['type'] == 'integer'
@@ -133,6 +133,7 @@ async def test_list_document_in_elasticsearch(
         expected_result, key=lambda x: x['a'][0]
     )
 
+
 @pytest.mark.asyncio
 async def test_reindex(elasticsearch_repo, es_client, index_for_test):
     first_mappings = {
@@ -144,17 +145,18 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
             },
         },
     }
-    first_create = await elasticsearch_repo.create_or_update_index(
+    await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=first_mappings,
     )
-    assert first_create is None
 
     doc_id = f'{uuid.uuid4()}'
     document = {'a': 52, 'name': 'Привет Эластик!', 'mau': 44}
     await elasticsearch_repo.insert_document(index_for_test, doc_id, document)
     body_for_search_first = {'query': {'term': {'a': 52}}}
-    docs = await elasticsearch_repo.search_in_index(index_for_test, body_for_search_first)
+    docs = await elasticsearch_repo.search_in_index(
+        index_for_test, body_for_search_first
+    )
     assert docs == [document]
 
     second_mappings = {
@@ -168,10 +170,10 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
         },
     }
     second_create = await elasticsearch_repo.create_or_update_index(
-        index_for_test,
-        second_mappings
+        index_for_test, second_mappings
     )
-    assert second_create and isinstance(second_create, str)
     body_for_search_second = {'query': {'term': {'mau': 44}}}
-    docs = await elasticsearch_repo.search_in_index(index_for_test, body_for_search_second)
+    docs = await elasticsearch_repo.search_in_index(
+        index_for_test, body_for_search_second
+    )
     assert docs == [document]

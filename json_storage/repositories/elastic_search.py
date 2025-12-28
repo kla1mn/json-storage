@@ -27,18 +27,17 @@ class ElasticSearchDBRepository:
             self._client = None
 
     async def create_or_update_index(
-        self,
-        index: str,
-        mappings: MappingsType,
-        *,
-        wait_for_completion: bool = True,
-        reindex_conflicts: str = 'proceed',
-    ) -> str | None:
+            self,
+            index: str,
+            mappings: MappingsType,
+            *,
+            wait_for_completion: bool = True,
+            reindex_conflicts: str = 'proceed',
+    ) -> str:
         """
         Попытка:
-          1) если индекс не существует — создаём с маппингом и возвращаем None
-          3) создаём новый индекс (без копирования settings),
-             реиндексим документы и атомарно переключаем алиасы / удаляем старый индекс.
+          1) если индекс/алиас не существует — создаём индекс с уникальным именем и алиас на него
+          2) создаём новый индекс, реиндексим документы и атомарно переключаем алиас.
              Возвращаем имя нового индекса.
         """
         client = await self._get_client()
@@ -52,24 +51,42 @@ class ElasticSearchDBRepository:
                 return bool(res.body)
             return bool(res)
 
-        # 1. Создаем индекс, если его нет
+        # Проверяем, существует ли индекс или алиас с таким именем
         exists = await _exists(index)
-        if not exists:
-            await client.indices.create(index=index, body=mappings)
-            return None
 
-        # 2. Создаем новый индекс для переиндексации
-        new_index = f'{index}_reindexed_{uuid.uuid4().hex[:8]}'
+        if not exists:
+            # 1. Создаем индекс с уникальным именем и алиас на него
+            physical_index = f'{index}_{uuid.uuid4().hex[:8]}'
+            await client.indices.create(index=physical_index, body=mappings)
+            await client.indices.put_alias(index=physical_index, name=index)
+            return physical_index
+
+        # 2. Определяем реальные индексы за алиасом
+        try:
+            alias_info = await client.indices.get_alias(name=index)
+            # Если index - это алиас, получаем список реальных индексов
+            old_indices = list(alias_info.body.keys()) if hasattr(alias_info, 'body') else list(alias_info.keys())
+        except NotFoundError:
+            # Это реальный индекс без алиаса (старая схема)
+            # Нужно мигрировать: создать новый индекс и алиас
+            old_indices = [index]
+        except Exception:
+            old_indices = [index]
+
+        # 3. Создаем новый физический индекс
+        new_index = f'{index}_{uuid.uuid4().hex[:8]}'
         try:
             await client.indices.create(index=new_index, body=mappings)
         except Exception:
             raise
+
         reindex_body: dict[str, Any] = {
             'source': {'index': index},
             'dest': {'index': new_index},
             'conflicts': reindex_conflicts,
         }
-        # 3. Реиндексируем
+
+        # 4. Реиндексируем
         try:
             await client.reindex(
                 body=reindex_body, wait_for_completion=wait_for_completion, refresh=True
@@ -81,17 +98,27 @@ class ElasticSearchDBRepository:
                 pass
             raise
 
-        # 4. Удаляем старый индекс
-        try:
-            await client.indices.delete(index=index)
-        except NotFoundError:
-            pass
-        except Exception:
-            pass
+        # 5. Атомарное переключение алиаса
+        actions = []
 
-        # 5. Создаём алиас со старым именем → на новый индекс
+        # Удаляем алиас со всех старых индексов (если он есть)
+        for old_idx in old_indices:
+            try:
+                # Проверяем, есть ли алиас на этом индексе
+                await client.indices.get_alias(index=old_idx, name=index)
+                actions.append({'remove': {'index': old_idx, 'alias': index}})
+            except NotFoundError:
+                # Это случай, когда index - это реальный индекс, не алиас
+                # Просто удалим его после создания алиаса
+                pass
+            except Exception:
+                pass
+
+        # Добавляем алиас на новый индекс
+        actions.append({'add': {'index': new_index, 'alias': index}})
+
         try:
-            await client.indices.put_alias(index=new_index, name=index)
+            await client.indices.update_aliases(body={'actions': actions})
         except Exception:
             try:
                 await client.indices.delete(index=new_index)
@@ -99,14 +126,16 @@ class ElasticSearchDBRepository:
                 pass
             raise
 
-        return new_index
+        # 6. Удаляем старые индексы
+        for old_idx in old_indices:
+            try:
+                await client.indices.delete(index=old_idx)
+            except NotFoundError:
+                pass
+            except Exception:
+                pass
 
-    async def delete_index(self, index: str) -> None:
-        client = await self._get_client()
-        try:
-            await client.indices.delete(index=index)
-        except NotFoundError:
-            pass
+        return new_index
 
     async def insert_document(
         self,

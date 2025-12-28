@@ -48,7 +48,7 @@ async def cleanup_elasticsearch_after_test(es_client):
 
     try:
         # Получаем список всех индексов
-        indices = await es_client.indices.get(index='test-*')
+        indices = await es_client.indices.get(index='*')
 
         # Удаляем каждый тестовый индекс
         for index_name in indices.keys():

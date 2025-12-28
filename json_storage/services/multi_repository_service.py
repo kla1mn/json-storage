@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 from fastapi import HTTPException
 from .dsl_translator import DSLTranslator
-from .jsonpath_parser import JSONPathParser
 from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
 from json_storage.schemas import DocumentListSchema, DocumentSchema
 
@@ -66,40 +65,12 @@ class MultiRepositoryService:
         )
 
     async def search_objects(
-        self,
-        namespace: str,
-        filters: dict[str, Any],
+        self, namespace: str, filters: str
     ) -> list[dict[str, Any]]:
         schema = self.SEARCH_SCHEMAS.get(namespace)
         if not schema:
             raise HTTPException(400, 'Search schema not set')
-
-        nested_groups: dict[str, list[dict]] = {}
-        must: list[dict] = []
-
-        for logical_name, value in filters.items():
-            if logical_name not in schema:
-                raise HTTPException(400, f'Unknown field: {logical_name}')
-
-            jsonpath = schema[logical_name]
-            segments = JSONPathParser.parse_json_path(jsonpath)
-            es_path = DSLTranslator.to_es_path(segments)
-
-            term = {'term': {es_path.field: value}}
-
-            if es_path.is_nested:
-                nested_groups.setdefault(es_path.nested_path, []).append(term)
-            else:
-                must.append(term)
-
-        for path, terms in nested_groups.items():
-            must.append({'nested': {'path': path, 'query': {'bool': {'must': terms}}}})
-
-        query = (
-            {'query': {'bool': {'must': must}}}
-            if must
-            else {'query': {'match_all': {}}}
-        )
+        query = DSLTranslator.build_query_from_expression(filters)
 
         resp = await self.elastic_repository.search_in_index(
             index=namespace,
