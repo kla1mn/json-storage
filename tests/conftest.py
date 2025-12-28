@@ -7,8 +7,10 @@ import pytest
 
 DSN = settings.postgres.dsn
 
-pytest_plugins = ('tests.fixtures.db',)
+pytest_plugins = ('tests.fixtures.db', 'tests.fixtures.taskiq')
 
+
+from json_storage.services.multi_repository_service import MultiRepositoryService
 
 @pytest.fixture(autouse=True)
 def cleanup_postgres_after_test():
@@ -17,15 +19,14 @@ def cleanup_postgres_after_test():
     # код после yield выполняется после теста
 
     with psycopg.connect(DSN) as conn, conn.cursor() as cur:
-        cur.execute('drop table if exists json_buffer cascade;')
-        cur.execute('drop table if exists json_chunks cascade;')
+        cur.execute('truncate table json_chunks cascade;')
 
         cur.execute(
             """
             select tablename
             from pg_tables
             where schemaname = 'public'
-              and tablename like 'ns\_%\_metadata' escape '\\';
+              and tablename like 'ns\\_%\\_metadata' escape '\\';
             """
         )
         tables = [row[0] for row in cur.fetchall()]
@@ -83,3 +84,6 @@ async def clean_index(elasticsearch_repo, index_for_test):
     await elasticsearch_repo.create_index(index_for_test)
     yield
     await elasticsearch_repo.delete_index(index_for_test)
+
+    MultiRepositoryService.NAMESPACES.clear()
+    MultiRepositoryService.SEARCH_SCHEMAS.clear()

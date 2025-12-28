@@ -27,8 +27,17 @@ class MultiRepositoryService:
             raise HTTPException(status_code=404)
         return meta
 
-    async def get_object_body(self, namespace: str, object_id: UUID) -> JSONType | None:
-        return await self.elastic_repository.get_document(namespace, str(object_id))
+    async def get_object_body(self, namespace: str, object_id: UUID) -> dict[str, Any]:
+        await self.get_object_meta(namespace, object_id)
+
+        doc = await self.elastic_repository.get_document(
+            index=namespace,
+            doc_id=str(object_id),
+        )
+        if doc is None:
+            raise HTTPException(status_code=202, detail='Документ ещё индексируется')
+
+        return doc
 
     async def create_object_stream(
         self,
@@ -47,6 +56,10 @@ class MultiRepositoryService:
             document_name=document_name,
             body=body,
         )
+
+        from json_storage.tasks import index_document_to_elastic
+        await index_document_to_elastic.kiq(namespace=namespace, object_id=doc.id)
+
         return uuid.UUID(doc.id)
 
     async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
