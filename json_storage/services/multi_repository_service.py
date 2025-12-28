@@ -28,22 +28,17 @@ class MultiRepositoryService:
             raise HTTPException(status_code=404)
         return meta
 
-    async def get_object_body(
-        self, namespace: str, object_id: UUID
-    ) -> StreamingResponse:
-        meta = await self.get_object_meta(namespace, object_id)
+    async def get_object_body(self, namespace: str, object_id: UUID) -> dict[str, Any]:
+        await self.get_object_meta(namespace, object_id)
 
-        async def gen() -> AsyncIterator[bytes]:
-            async for chunk in self.postgres_repository.iter_chunks_by_id(
-                str(object_id)
-            ):
-                yield chunk
+        doc = await self.elastic_repository.get_document(
+            index=namespace,
+            doc_id=str(object_id),
+        )
+        if doc is None:
+            raise HTTPException(status_code=202, detail='Документ ещё индексируется')
 
-        headers = {
-            'Content-Length': str(meta.content_length),
-        }
-
-        return StreamingResponse(gen(), media_type='application/json', headers=headers)
+        return doc
 
     async def create_object_stream(
         self,
