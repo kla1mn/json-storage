@@ -1,7 +1,7 @@
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
-from json_storage.services.multi_repository_service import MultiRepositoryService
 
+from json_storage.services import MultiRepositoryService
 from json_storage.settings import settings
 import psycopg
 import pytest
@@ -34,6 +34,9 @@ def cleanup_postgres_after_test():
             cur.execute(f'drop table if exists "{table}" cascade;')
 
         conn.commit()
+
+    MultiRepositoryService.NAMESPACES.clear()
+    MultiRepositoryService.SEARCH_SCHEMAS.clear()
 
 
 @pytest_asyncio.fixture(autouse=True)

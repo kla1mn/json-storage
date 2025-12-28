@@ -41,12 +41,7 @@ class ElasticSearchDBRepository:
              Возвращаем имя нового индекса.
         """
         if mappings is None:
-            mappings = {
-                "mappings": {
-                    "dynamic": True,
-                    "properties": {}
-                }
-            }
+            mappings = {'mappings': {'dynamic': True, 'properties': {}}}
         client = await self._get_client()
 
         async def _exists(idx: str) -> bool:

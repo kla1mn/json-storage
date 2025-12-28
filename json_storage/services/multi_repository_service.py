@@ -67,7 +67,7 @@ class MultiRepositoryService:
     async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
         await asyncio.gather(
             self.postgres_repository.delete_object_by_id(namespace, str(object_id)),
-            self.elastic_repository.delete_document(namespace, str(object_id))
+            self.elastic_repository.delete_document(namespace, str(object_id)),
         )
 
     async def set_search_schema(
