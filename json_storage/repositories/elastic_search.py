@@ -12,7 +12,7 @@ MappingsType = dict[str, Any]
 
 @dataclass
 class ElasticSearchDBRepository:
-    url: str = 'http://localhost:9200'
+    url: str
     _client: AsyncElasticsearch | None = field(init=False, default=None)
 
     async def _get_client(self) -> AsyncElasticsearch:

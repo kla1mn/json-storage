@@ -1,10 +1,8 @@
-import os
-
+from json_storage.settings import settings
 import psycopg
 import pytest
 
-DSN = os.getenv('PG_DSN', 'postgresql://json:json@localhost:5432/jsonstorage')
-
+DSN = settings.postgres.dsn
 
 pytest_plugins = ('tests.fixtures.db',)
 
