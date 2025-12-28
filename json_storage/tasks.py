@@ -29,7 +29,9 @@ async def _index_document_to_elastic_impl(namespace: str, object_id: str) -> Non
         if not isinstance(payload, dict):
             raise TypeError('Only JSON objects (dict) are supported for indexing')
 
-        await elastic.insert_document(index=index_name, doc_id=object_id, document=payload)
+        ok = await elastic.insert_document(index=index_name, doc_id=object_id, document=payload)
+        if ok:
+            await postgres.delete_chunks_by_id(object_id)
     finally:
         await postgres.aclose()
         await elastic.aclose()
