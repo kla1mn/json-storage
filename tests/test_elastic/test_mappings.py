@@ -1,7 +1,5 @@
 import pytest
-import pytest_asyncio
 
-from elasticsearch import AsyncElasticsearch
 from json_storage.settings import settings
 
 DSN = settings.elastic_search.dsn
@@ -15,13 +13,6 @@ TEST_MAPPINGS = {
         'name': {'type': 'keyword'},
     },
 }
-
-
-@pytest_asyncio.fixture(scope='session')
-async def es_client():
-    client = AsyncElasticsearch(DSN)
-    yield client
-    await client.close()
 
 
 @pytest.mark.asyncio
