@@ -18,7 +18,7 @@ async def _index_document_to_elastic_impl(namespace: str, object_id: str) -> Non
             return
 
         index_name = namespace
-        await elastic.create_or_update_index(index=index_name)
+        await elastic.ensure_index(index=index_name)
 
         buf = bytearray()
         async for chunk in postgres.iter_chunks_by_id(object_id):
