@@ -104,6 +104,6 @@ async def list_objects(
     ),
 ) -> JSONResponse:
     content = await multi_repo.read_limit_namespace(namespace, limit, cursor)
-    return JSONResponse(content=content)
+    return JSONResponse(content=content.model_dump(mode="json"))
 
 
