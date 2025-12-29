@@ -11,6 +11,14 @@ from .services import MultiRepositoryService
 router = APIRouter(prefix='/ns', route_class=DishkaRoute)
 
 
+@router.get('/get_namespaces', response_model=list[str])
+async def get_namespaces(
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> JSONResponse:
+    namespaces = await multi_repo.get_namespace()
+    return JSONResponse(content=namespaces)
+
+
 @router.get('/{namespace}/objects/{object_id}/meta', response_model=DocumentSchema)
 async def get_object_meta(
     namespace: str,
@@ -99,9 +107,3 @@ async def list_objects(
     return JSONResponse(content=content)
 
 
-@router.get('/get_namespaces', response_model=list[str])
-async def get_namespaces(
-    multi_repo: FromDishka[MultiRepositoryService],
-) -> JSONResponse:
-    namespaces = await multi_repo.get_namespace()
-    return JSONResponse(content=namespaces)
