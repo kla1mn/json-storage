@@ -1,5 +1,5 @@
 from aio_pika import ExchangeType
-
+from fastapi.middleware.cors import CORSMiddleware
 from .depends import provider
 from taskiq_aio_pika import AioPikaBroker
 from .router import router
@@ -13,6 +13,18 @@ from .container import ContainerManager
 
 def create_fastapi_app() -> FastAPI:
     app = FastAPI(title='json-storage', docs_url='/docs', openapi_url='/docs.json')
+
+    # Настройка CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Разрешить все источники (в продакшене укажите конкретные)
+        allow_credentials=True,
+        allow_methods=["*"],  # Разрешить все методы (GET, POST, PUT, DELETE и т.д.)
+        allow_headers=["*"],  # Разрешить все заголовки
+        expose_headers=["*"],  # Разрешить клиентам видеть все заголовки ответа
+        max_age=600,  # Кешировать результаты preflight запросов на 10 минут
+    )
+
     app.include_router(router)
     application_providers = [FastapiProvider(), provider]
     container = ContainerManager.create(application_providers)
