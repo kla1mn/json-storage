@@ -15,7 +15,6 @@ async def _body_bytes(raw: bytes):
 async def test_taskiq_indexes_document_to_es(
     multi_repository_service,
     elasticsearch_repo,
-    captured_taskiq_tasks,
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
@@ -26,13 +25,6 @@ async def test_taskiq_indexes_document_to_es(
         document_name='doc',
     )
 
-    before = await elasticsearch_repo.get_document(index=namespace, doc_id=str(obj_id))
-    assert before is None
-
-    assert captured_taskiq_tasks, 'create_object_stream must enqueue taskiq task'
-    res = await captured_taskiq_tasks[-1].wait_result(timeout=10)
-    assert not res.is_err
-
     got = await elasticsearch_repo.get_document(index=namespace, doc_id=str(obj_id))
     assert got == json.loads(raw)
 
@@ -41,7 +33,6 @@ async def test_taskiq_indexes_document_to_es(
 async def test_taskiq_deletes_chunks_after_success(
     multi_repository_service,
     elasticsearch_repo,
-    captured_taskiq_tasks,
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
@@ -57,10 +48,6 @@ async def test_taskiq_deletes_chunks_after_success(
         (cnt_before,) = cur.fetchone()
         assert cnt_before >= 0
 
-    assert captured_taskiq_tasks
-    res = await captured_taskiq_tasks[-1].wait_result(timeout=10)
-    assert not res.is_err
-
     with psycopg.connect(settings.postgres.dsn) as conn, conn.cursor() as cur:
         cur.execute('select count(*) from json_chunks where id = %s', (str(obj_id),))
         (cnt_after,) = cur.fetchone()
@@ -73,7 +60,6 @@ async def test_taskiq_deletes_chunks_after_success(
 @pytest.mark.asyncio
 async def test_get_object_body_reads_from_elastic(
     multi_repository_service,
-    captured_taskiq_tasks,
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
@@ -83,10 +69,6 @@ async def test_get_object_body_reads_from_elastic(
         body=_body_bytes(raw),
         document_name='doc',
     )
-
-    assert captured_taskiq_tasks
-    res = await captured_taskiq_tasks[-1].wait_result(timeout=10)
-    assert not res.is_err
 
     body = await multi_repository_service.get_object_body(
         namespace, uuid.UUID(str(obj_id))

@@ -36,19 +36,18 @@ class ElasticSearchDBRepository:
         Никаких alias-ротаций, просто create-if-not-exists.
         """
         if mappings is None:
-            mappings = {"mappings": {"dynamic": True, "properties": {}}}
+            mappings = {'mappings': {'dynamic': True, 'properties': {}}}
 
         client = await self._get_client()
 
         try:
             res = await client.indices.exists(index=index)
-            exists = bool(res.body) if hasattr(res, "body") else bool(res)
+            exists = bool(res.body) if hasattr(res, 'body') else bool(res)
         except Exception:
             exists = False
 
         if not exists:
             await client.indices.create(index=index, body=mappings)
-
 
     async def create_or_update_index(
         self,
