@@ -35,8 +35,8 @@ class ElasticSearchDBRepository:
         cls, index: str, real_namespace: str, mappings: MappingsType
     ) -> None:
         client = AsyncElasticsearch(settings.elastic_search.dsn)
+        new_index = f'{real_namespace}_{uuid.uuid4()}'
         try:
-            new_index = f'{real_namespace}_{uuid.uuid4()}'
             await client.indices.create(index=new_index, body=mappings)
             reindex_body: dict[str, Any] = {
                 'source': {'index': index},
