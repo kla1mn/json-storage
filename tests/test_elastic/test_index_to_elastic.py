@@ -25,7 +25,7 @@ async def test_taskiq_indexes_document_to_es(
         document_name='doc',
     )
 
-    got = await elasticsearch_repo.get_document(index=namespace, doc_id=str(obj_id))
+    got = await elasticsearch_repo.get_document(namespace=namespace, doc_id=str(obj_id))
     assert got == json.loads(raw)
 
 
@@ -53,7 +53,7 @@ async def test_taskiq_deletes_chunks_after_success(
         (cnt_after,) = cur.fetchone()
         assert cnt_after == 0
 
-    got = await elasticsearch_repo.get_document(index=namespace, doc_id=str(obj_id))
+    got = await elasticsearch_repo.get_document(namespace=namespace, doc_id=str(obj_id))
     assert got == json.loads(raw)
 
 

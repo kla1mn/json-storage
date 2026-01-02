@@ -32,7 +32,7 @@ class MultiRepositoryService:
         await self.get_object_meta(namespace, object_id)
 
         doc = await self.elastic_repository.get_document(
-            index=namespace,
+            namespace=namespace,
             doc_id=str(object_id),
         )
         if doc is None:
@@ -78,7 +78,7 @@ class MultiRepositoryService:
         self.SEARCH_SCHEMAS[namespace] = search_schema
         mapping = DSLTranslator.schema_to_es_mapping(search_schema)
         await self.elastic_repository.create_or_update_index(
-            index=namespace,
+            namespace=namespace,
             mappings=mapping,
         )
 
@@ -91,7 +91,7 @@ class MultiRepositoryService:
         query = DSLTranslator.build_query_from_expression(filters)
 
         resp = await self.elastic_repository.search_in_index(
-            index=namespace,
+            namespace=namespace,
             body=query,
         )
 
