@@ -43,20 +43,9 @@ class ElasticSearchDBRepository:
                 'dest': {'index': new_index},
                 'conflicts': 'proceed',
             }
-
-            resp = await client.reindex(
+            await client.reindex(
                 body=reindex_body, wait_for_completion=True, refresh=True
             )
-            if isinstance(resp, dict):
-                failures = resp.get('failures') or resp.get('failures', [])
-                if failures:
-                    try:
-                        await client.indices.delete(
-                            index=new_index, ignore_unavailable=True
-                        )
-                    except Exception:
-                        pass
-                    raise RuntimeError(f'Reindex finished with failures: {failures}')
             cls.NAMESPACES[real_namespace] = new_index
         except Exception as exc:
             await client.indices.delete(index=new_index, ignore_unavailable=True)
