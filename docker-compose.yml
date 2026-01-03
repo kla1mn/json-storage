@@ -3,15 +3,15 @@ services:
     build: .
     container_name: json-storage
     environment:
-      POSTGRES_DSN: postgresql://json:json@postgres:5432/jsonstorage
-      ELASTICSEARCH_URL: http://elastic-data:9200
+      POSTGRES__DSN: postgresql://json:json@postgres:5432/jsonstorage
+      ELASTIC_SEARCH__DSN: http://elastic-data:9200
+      RABBIT_MQ__DSN: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8080:8080"
     depends_on:
       - postgres
       - elastic-data
-    env_file:
-      - .env
+      - rabbitmq
 #    logging:
 #      driver: gelf
 #      options:
@@ -34,7 +34,7 @@ services:
       POSTGRES_USER: json
       POSTGRES_PASSWORD: json
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 

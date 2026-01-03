@@ -1,3 +1,6 @@
+import asyncio
+import sys
+
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
 
@@ -9,6 +12,15 @@ import pytest
 DSN = settings.postgres.dsn
 
 pytest_plugins = ('tests.fixtures.db', 'tests.fixtures.taskiq')
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def ensure_postgres_schema(postgres_repo):
+    await postgres_repo.create_chunks_table()
+    await postgres_repo.create_buffer_table()
 
 
 @pytest.fixture(autouse=True)

@@ -9,6 +9,7 @@ from dishka.integrations.fastapi import FastapiProvider
 from dishka.integrations.taskiq import setup_dishka as taskiq_setup_dishka
 from dishka.integrations.taskiq import TaskiqProvider
 from .container import ContainerManager
+from .settings import settings
 
 
 def create_fastapi_app() -> FastAPI:
@@ -22,6 +23,7 @@ def create_fastapi_app() -> FastAPI:
 
 def create_taskiq_broker() -> AioPikaBroker:
     broker = AioPikaBroker(
+        url=settings.rabbit_mq.dsn,
         queue_name='taskiq',
         exchange='taskiq',
         exchange_type=ExchangeType.DIRECT,
