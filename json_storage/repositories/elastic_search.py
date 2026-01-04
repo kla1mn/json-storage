@@ -74,6 +74,7 @@ class ElasticSearchDBRepository:
 
         if not exists:
             await client.indices.create(index=real_index, body=mappings)
+            return
         if namespace in self.REINDEX_NAMESPACE:
             raise RuntimeError('Уже производится переиндексация')
 
