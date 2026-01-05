@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 from .jsonpath_parser import JSONPathParser, PathSegment
 
@@ -68,31 +68,94 @@ class DSLTranslator:
         return EsPath(field=field, is_nested=True, nested_path=nested_path)
 
     @staticmethod
-    def schema_to_es_mapping(search_schema: dict[str, str]) -> dict:
+    def schema_to_es_mapping(search_schema: Mapping[str, Any]) -> dict:
+        """
+        Виды search-schema:
+
+        1) Упрощённый (type keyword):
+            {"status": "$.status"}  -> keyword
+
+        2) С указанием типа (inline mapping):
+            {"price": {"path": "$.price", "type": "double"}}
+
+        3) Маппинг, который можно вставить сразу в ES (explicit mapping):
+            {"title": {"path": "$.title", "mapping": {"type": "text", "analyzer": "russian"}}}
+        """
+
+        def extract_path_and_mapping(defn: Any) -> tuple[str, dict]:
+            if isinstance(defn, str):
+                return defn, {"type": "keyword"}
+
+            if isinstance(defn, dict):
+                path = defn.get("path") or defn.get("json_path")
+                if not path:
+                    raise ValueError("Schema entry dict must contain string key 'path' (or 'json_path').")
+
+                if "mapping" in defn:
+                    mapping = defn["mapping"]
+                    if not isinstance(mapping, dict):
+                        raise TypeError("If provided, 'mapping' must be a dict.")
+                    field_mapping = dict(mapping)
+                else:
+                    field_mapping = {
+                        k: v
+                        for k, v in defn.items()
+                        if k not in ("path", "json_path", "mapping")
+                    }
+
+                if not field_mapping:
+                    field_mapping = {"type": "keyword"}
+
+                return path, field_mapping
+
+            raise TypeError(
+                "Schema entry value must be either JSONPath string or dict with {'path': ..., ...}."
+            )
+
         properties: dict = {}
         nested_props: dict[str, dict] = defaultdict(
-            lambda: {'type': 'nested', 'properties': {}}
+            lambda: {"type": "nested", "properties": {}}
         )
 
-        for logical_name, json_path in search_schema.items():
-            segments: list[PathSegment] = JSONPathParser.parse_json_path(json_path)
-            es_path: EsPath = DSLTranslator.to_es_path(segments)
+        for _, defn in search_schema.items():
+            json_path, field_mapping = extract_path_and_mapping(defn)
+
+            segments = JSONPathParser.parse_json_path(json_path)
+            es_path = DSLTranslator.to_es_path(segments)
 
             if es_path.is_nested:
                 nested_path = es_path.nested_path
-                inner_name = es_path.field[len(nested_path) + 1:]
-                nested_props[nested_path]["properties"][inner_name] = {"type": "keyword"}
+                inner_name = es_path.field[len(nested_path) + 1 :]  # after "nested_path."
+                nested_props[nested_path]["properties"][inner_name] = field_mapping
             else:
-                properties[es_path.field] = {'type': 'keyword'}
+                properties[es_path.field] = field_mapping
 
         for nested_path, nested_def in nested_props.items():
-            properties[nested_path] = nested_def
+            if nested_path in properties:
+                existing = properties[nested_path]
+                if not isinstance(existing, dict):
+                    raise TypeError(
+                        f"Mapping for {nested_path!r} must be a dict, got {type(existing)!r}"
+                    )
 
-        return {
-            "mappings": {
-                "properties": properties
-            }
-        }
+                if "type" in existing and existing["type"] != "nested":
+                    raise ValueError(
+                        f"Field {nested_path!r} is used as nested path, "
+                        f"but schema defines it as type={existing['type']!r}"
+                    )
+
+                merged = dict(existing)
+                merged["type"] = "nested"
+
+                merged_props = dict(existing.get("properties", {}))
+                merged_props.update(nested_def["properties"])
+                merged["properties"] = merged_props
+
+                properties[nested_path] = merged
+            else:
+                properties[nested_path] = nested_def
+
+        return {"mappings": {"properties": properties}}
 
 
     @staticmethod
