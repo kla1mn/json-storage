@@ -41,5 +41,10 @@ async def index_document_to_elastic(
 
 @taskiq_broker.task()
 @inject
-async def reindex_namespace(index: str, real_namespace: str, mappings: MappingsType, elastic: FromDishka[ElasticSearchDBRepository],) -> None:
+async def reindex_namespace(
+    index: str,
+    real_namespace: str,
+    mappings: MappingsType,
+    elastic: FromDishka[ElasticSearchDBRepository],
+) -> None:
     await elastic.reindex_namespace(index, real_namespace, mappings)

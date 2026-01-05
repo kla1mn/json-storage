@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from typing import Any
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
@@ -5,6 +6,7 @@ from starlette.responses import JSONResponse, Response
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
+from .errors import ReindexNamespaceYetError
 from .schemas import DocumentListSchema, DocumentSchema
 from .services import MultiRepositoryService
 
@@ -66,7 +68,13 @@ async def set_search_schema(
     multi_repo: FromDishka[MultiRepositoryService],
     search_schema: dict[str, Any] = Body(..., description='Схема поиска'),
 ) -> Response:
-    await multi_repo.set_search_schema(namespace, search_schema)
+    try:
+        await multi_repo.set_search_schema(namespace, search_schema)
+    except ReindexNamespaceYetError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail='Нельзя назначить новую схему пока производится переиндексация',
+        ) from exc
     return Response(status_code=204)
 
 

@@ -4,6 +4,8 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Optional, ClassVar, AsyncGenerator
+
+from json_storage.errors import ReindexNamespaceYetError
 from json_storage.settings import settings
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
@@ -72,10 +74,11 @@ class ElasticSearchDBRepository:
             mappings = {'mappings': {'dynamic': True, 'properties': {}}}
 
         async with self.get_client() as client:
-
             try:
                 _exists = await client.indices.exists(index=real_index)
-                exists = bool(_exists.body) if hasattr(_exists, 'body') else bool(_exists)
+                exists = (
+                    bool(_exists.body) if hasattr(_exists, 'body') else bool(_exists)
+                )
             except Exception:
                 exists = False
 
@@ -83,11 +86,14 @@ class ElasticSearchDBRepository:
                 await client.indices.create(index=real_index, body=mappings)
                 return
             if namespace in self.REINDEX_NAMESPACES:
-                raise RuntimeError('Уже производится переиндексация')
+                raise ReindexNamespaceYetError
 
             from json_storage.tasks import reindex_namespace
+
             self.REINDEX_NAMESPACES.add(namespace)
-            await reindex_namespace.kiq(index=real_index, real_namespace=namespace, mappings=mappings)
+            await reindex_namespace.kiq(
+                index=real_index, real_namespace=namespace, mappings=mappings
+            )
 
     async def insert_document(
         self,
@@ -142,5 +148,7 @@ class ElasticSearchDBRepository:
     ) -> list[Any]:
         real_index = self._get_real_index(namespace)
         async with self.get_client() as client:
-            resp = await client.search(index=real_index, body=body, size=size, from_=from_)
+            resp = await client.search(
+                index=real_index, body=body, size=size, from_=from_
+            )
             return [hit['_source'] for hit in resp.body['hits']['hits']]
