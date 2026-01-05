@@ -102,7 +102,9 @@ async def read_namespace(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:
-    return JSONResponse(content=(await multi_repo.read_namespace(namespace)).model_dump(mode='json'))
+    return JSONResponse(
+        content=(await multi_repo.read_namespace(namespace)).model_dump(mode='json')
+    )
 
 
 @router.get('/{namespace}/objects', response_model=DocumentListSchema)

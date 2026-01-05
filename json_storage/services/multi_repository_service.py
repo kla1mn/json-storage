@@ -74,7 +74,9 @@ class MultiRepositoryService:
         namespace: str,
         search_schema: dict[str, Any],
     ) -> None:
-        if (set_schema := self.SEARCH_SCHEMAS.get(namespace)) and set_schema == search_schema:
+        if (
+            set_schema := self.SEARCH_SCHEMAS.get(namespace)
+        ) and set_schema == search_schema:
             return
         self.SEARCH_SCHEMAS[namespace] = search_schema
         mapping = DSLTranslator.schema_to_es_mapping(search_schema)
