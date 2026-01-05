@@ -26,6 +26,7 @@ def create_taskiq_broker() -> AioPikaBroker:
         broker = InMemoryBroker(await_inplace=True)
     else:
         broker = AioPikaBroker(
+            url=settings.rabbit_mq.dsn,
             queue_name='taskiq',
             exchange='taskiq',
             exchange_type=ExchangeType.DIRECT,
