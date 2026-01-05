@@ -22,7 +22,7 @@ async def get_namespaces(
 
 
 @router.post('/{namespace}/create', response_model=list[str])
-async def get_namespaces(
+async def create_namespace(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:

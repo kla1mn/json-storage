@@ -7,6 +7,10 @@ import pytest
 from json_storage.settings import settings
 
 
+async def _body_bytes(raw: bytes):
+    yield raw
+
+
 @pytest.mark.asyncio
 async def test_taskiq_indexes_document_to_es(
     multi_repository_service,
