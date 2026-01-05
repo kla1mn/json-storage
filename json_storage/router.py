@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from typing import Any
 from dishka import FromDishka
 from dishka.integrations.fastapi import DishkaRoute
@@ -5,6 +6,7 @@ from starlette.responses import JSONResponse, Response
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
+from .errors import ReindexNamespaceYetError
 from .schemas import DocumentListSchema, DocumentSchema
 from .services import MultiRepositoryService
 
@@ -16,6 +18,15 @@ async def get_namespaces(
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:
     namespaces = await multi_repo.get_namespace()
+    return JSONResponse(content=namespaces)
+
+
+@router.post('/{namespace}/create', response_model=list[str])
+async def create_namespace(
+    namespace: str,
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> JSONResponse:
+    namespaces = await multi_repo.create_namespace(namespace)
     return JSONResponse(content=namespaces)
 
 
@@ -66,7 +77,13 @@ async def set_search_schema(
     multi_repo: FromDishka[MultiRepositoryService],
     search_schema: dict[str, Any] = Body(..., description='Схема поиска'),
 ) -> Response:
-    await multi_repo.set_search_schema(namespace, search_schema)
+    try:
+        await multi_repo.set_search_schema(namespace, search_schema)
+    except ReindexNamespaceYetError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail='Нельзя назначить новую схему пока производится переиндексация',
+        ) from exc
     return Response(status_code=204)
 
 
@@ -85,7 +102,9 @@ async def read_namespace(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:
-    return JSONResponse(content=await multi_repo.read_namespace(namespace))
+    return JSONResponse(
+        content=(await multi_repo.read_namespace(namespace)).model_dump(mode='json')
+    )
 
 
 @router.get('/{namespace}/objects', response_model=DocumentListSchema)
@@ -104,6 +123,4 @@ async def list_objects(
     ),
 ) -> JSONResponse:
     content = await multi_repo.read_limit_namespace(namespace, limit, cursor)
-    return JSONResponse(content=content.model_dump(mode="json"))
-
-
+    return JSONResponse(content=content.model_dump(mode='json'))

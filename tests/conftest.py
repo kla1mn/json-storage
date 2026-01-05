@@ -1,14 +1,16 @@
+from typing import AsyncGenerator
+
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
-
+from json_storage.cmd.taskiq_broker import taskiq_broker
 from json_storage.services import MultiRepositoryService
-from json_storage.settings import settings
 import psycopg
 import pytest
+from json_storage.settings import settings
 
 DSN = settings.postgres.dsn
 
-pytest_plugins = ('tests.fixtures.db', 'tests.fixtures.taskiq')
+pytest_plugins = ('tests.fixtures.db',)
 
 
 @pytest.fixture(autouse=True)
@@ -78,3 +80,10 @@ async def es_client(elastic_dsn):
     client = AsyncElasticsearch(elastic_dsn)
     yield client
     await client.close()
+
+
+@pytest.fixture(scope='session', autouse=True)
+async def init_taskiq_broker() -> AsyncGenerator[None, None]:
+    await taskiq_broker.startup()
+    yield
+    await taskiq_broker.shutdown()
