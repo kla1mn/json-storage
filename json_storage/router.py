@@ -21,6 +21,15 @@ async def get_namespaces(
     return JSONResponse(content=namespaces)
 
 
+@router.post('/{namespace}/create', response_model=list[str])
+async def get_namespaces(
+    namespace: str,
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> JSONResponse:
+    namespaces = await multi_repo.create_namespace(namespace)
+    return JSONResponse(content=namespaces)
+
+
 @router.get('/{namespace}/objects/{object_id}/meta', response_model=DocumentSchema)
 async def get_object_meta(
     namespace: str,

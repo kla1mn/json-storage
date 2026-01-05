@@ -19,6 +19,7 @@ class MultiRepositoryService:
     SEARCH_SCHEMAS: ClassVar[dict[str, dict[str, Any]]] = {}
     postgres_repository: PostgresDBRepository
     elastic_repository: ElasticSearchDBRepository
+    is_init_chunks_table: ClassVar[bool] = False
 
     async def get_object_meta(self, namespace: str, object_id: UUID) -> DocumentSchema:
         meta = await self.postgres_repository.get_document_meta(
@@ -48,9 +49,7 @@ class MultiRepositoryService:
         document_name: str,
     ) -> UUID:
         if namespace not in self.NAMESPACES:
-            self.NAMESPACES.add(namespace)
-            await self.postgres_repository.create_chunks_table()
-            await self.postgres_repository.create_meta_table_by_namespace(namespace)
+            await self.create_namespace(namespace)
 
         doc = await self.postgres_repository.create_document_stream(
             namespace=namespace,
@@ -75,6 +74,9 @@ class MultiRepositoryService:
         namespace: str,
         search_schema: dict[str, Any],
     ) -> None:
+        if set_schema := self.SEARCH_SCHEMAS.get(namespace):
+            if set_schema == search_schema:
+                return
         self.SEARCH_SCHEMAS[namespace] = search_schema
         mapping = DSLTranslator.schema_to_es_mapping(search_schema)
         await self.elastic_repository.create_or_update_index(
@@ -115,4 +117,15 @@ class MultiRepositoryService:
         )
 
     async def get_namespace(self) -> list[str]:
+        return sorted(list(self.NAMESPACES))
+
+    async def create_namespace(self, namespace: str) -> list[str]:
+        await asyncio.gather(
+            self.postgres_repository.create_meta_table_by_namespace(namespace),
+            self.elastic_repository.create_or_update_index(namespace=namespace),
+        )
+        if not MultiRepositoryService.is_init_chunks_table:
+            await self.postgres_repository.create_chunks_table()
+            MultiRepositoryService.is_init_chunks_table = True
+        self.NAMESPACES.add(namespace)
         return sorted(list(self.NAMESPACES))

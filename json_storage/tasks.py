@@ -5,8 +5,10 @@ import json
 from typing import Any
 from json_storage.cmd.taskiq_broker import taskiq_broker
 from json_storage.repositories import ElasticSearchDBRepository, PostgresDBRepository
+import asyncio
 
 MappingsType = dict[str, Any]
+JSONType = dict[str, Any]
 
 
 @taskiq_broker.task(retry_on_error=True, max_retries=10)
@@ -15,14 +17,12 @@ async def index_document_to_elastic(
     namespace: str,
     object_id: str,
     postgres: FromDishka[PostgresDBRepository],
-    elastic: FromDishka[ElasticSearchDBRepository],
+    elastic_repo: FromDishka[ElasticSearchDBRepository],
 ) -> None:
     meta = await postgres.get_document_meta(namespace, object_id)
     if meta is None:
         return
-
     index_name = namespace
-    await elastic.create_or_update_index(namespace=index_name)
 
     buf = bytearray()
     async for chunk in postgres.iter_chunks_by_id(object_id):
@@ -32,7 +32,7 @@ async def index_document_to_elastic(
     if not isinstance(payload, dict):
         raise TypeError('Only JSON objects (dict) are supported for indexing')
 
-    ok = await elastic.insert_document(
+    ok = await elastic_repo.insert_document(
         namespace=index_name, doc_id=object_id, document=payload
     )
     if ok:
@@ -45,6 +45,20 @@ async def reindex_namespace(
     index: str,
     real_namespace: str,
     mappings: MappingsType,
-    elastic: FromDishka[ElasticSearchDBRepository],
+    elastic_repo: FromDishka[ElasticSearchDBRepository],
 ) -> None:
-    await elastic.reindex_namespace(index, real_namespace, mappings)
+    await elastic_repo.reindex_namespace(index, real_namespace, mappings)
+
+
+@taskiq_broker.task(retry_on_error=True, max_retries=10)
+@inject
+async def insert_in_reindex_namespace(
+    real_namespace: str,
+    doc_id: str,
+    document: JSONType,
+    elastic_repo: FromDishka[ElasticSearchDBRepository],
+) -> None:
+    if not (index := elastic_repo.REINDEX_NAMESPACES.get(real_namespace)):
+        await asyncio.sleep(3)
+        raise RuntimeError('Ждем, когда инициализируется индекс.')
+    await elastic_repo.insert_in_index(index, doc_id, document)

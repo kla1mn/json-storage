@@ -17,7 +17,7 @@ MappingsType = dict[str, Any]
 @dataclass
 class ElasticSearchDBRepository:
     NAMESPACES: ClassVar[dict[str, str]] = {}
-    REINDEX_NAMESPACES: ClassVar[set[str]] = set()
+    REINDEX_NAMESPACES: ClassVar[dict[str, str | None]] = {}
     url: str
     _client: AsyncElasticsearch | None = field(init=False, default=None)
 
@@ -46,6 +46,7 @@ class ElasticSearchDBRepository:
         new_index = f'{real_namespace}_{uuid.uuid4()}'
         try:
             await client.indices.create(index=new_index, body=mappings)
+            cls.REINDEX_NAMESPACES[real_namespace] = new_index
             reindex_body: dict[str, Any] = {
                 'source': {'index': index},
                 'dest': {'index': new_index},
@@ -59,7 +60,7 @@ class ElasticSearchDBRepository:
             await client.indices.delete(index=new_index, ignore_unavailable=True)
             raise exc
         finally:
-            cls.REINDEX_NAMESPACES.remove(real_namespace)
+            cls.REINDEX_NAMESPACES.pop(real_namespace)
             await client.close()
 
     async def create_or_update_index(
@@ -90,7 +91,7 @@ class ElasticSearchDBRepository:
 
             from json_storage.tasks import reindex_namespace
 
-            self.REINDEX_NAMESPACES.add(namespace)
+            self.REINDEX_NAMESPACES[namespace] = None
             await reindex_namespace.kiq(
                 index=real_index, real_namespace=namespace, mappings=mappings
             )
@@ -103,9 +104,30 @@ class ElasticSearchDBRepository:
         refresh: str | None = 'wait_for',
     ) -> bool:
         real_index = self._get_real_index(namespace)
+        if namespace in self.REINDEX_NAMESPACES:
+            from json_storage.tasks import insert_in_reindex_namespace
+
+            await insert_in_reindex_namespace.kiq(namespace, doc_id, document)
+
         async with self.get_client() as client:
             resp = await client.index(
                 index=real_index,
+                id=doc_id,
+                document=document,
+                refresh=refresh,
+            )
+            return resp.get('result') in ('created', 'updated')
+
+    async def insert_in_index(
+        self,
+        index: str,
+        doc_id: str,
+        document: JSONType,
+        refresh: str | None = 'wait_for',
+    ) -> bool:
+        async with self.get_client() as client:
+            resp = await client.index(
+                index=index,
                 id=doc_id,
                 document=document,
                 refresh=refresh,

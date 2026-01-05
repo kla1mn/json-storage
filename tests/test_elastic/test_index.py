@@ -17,6 +17,10 @@ def mappings_for_test():
     }
 
 
+async def _body_bytes(raw: bytes):
+    yield raw
+
+
 @pytest.mark.asyncio
 async def test_create_or_update_index_with_mappings(
     elasticsearch_repo, es_client, index_for_test, mappings_for_test
@@ -193,7 +197,7 @@ async def test_two_reindex(elasticsearch_repo, es_client, index_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test, mappings=first_mappings
     )
-    elasticsearch_repo.REINDEX_NAMESPACES.add(index_for_test)
+    elasticsearch_repo.REINDEX_NAMESPACES[index_for_test] = None
     second_mappings = {
         'mappings': {
             'dynamic': False,

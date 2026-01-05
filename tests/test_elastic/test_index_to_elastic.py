@@ -7,10 +7,6 @@ import pytest
 from json_storage.settings import settings
 
 
-async def _body_bytes(raw: bytes):
-    yield raw
-
-
 @pytest.mark.asyncio
 async def test_taskiq_indexes_document_to_es(
     multi_repository_service,
@@ -18,7 +14,7 @@ async def test_taskiq_indexes_document_to_es(
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
-
+    await elasticsearch_repo.create_or_update_index(namespace)
     obj_id = await multi_repository_service.create_object_stream(
         namespace=namespace,
         body=_body_bytes(raw),
@@ -36,7 +32,7 @@ async def test_taskiq_deletes_chunks_after_success(
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
-
+    await elasticsearch_repo.create_or_update_index(namespace)
     obj_id = await multi_repository_service.create_object_stream(
         namespace=namespace,
         body=_body_bytes(raw),
@@ -60,10 +56,11 @@ async def test_taskiq_deletes_chunks_after_success(
 @pytest.mark.asyncio
 async def test_get_object_body_reads_from_elastic(
     multi_repository_service,
+    elasticsearch_repo,
 ):
     namespace = f'ns_{uuid.uuid4().hex[:12]}'
     raw = b'{"k":"v"}'
-
+    await elasticsearch_repo.create_or_update_index(namespace)
     obj_id = await multi_repository_service.create_object_stream(
         namespace=namespace,
         body=_body_bytes(raw),
