@@ -84,6 +84,25 @@ class PostgresDBRepository:
                     (data,) = row
                     yield bytes(data)
 
+    async def delete_chunks_by_id(self, doc_id: str) -> bool:
+        pool = await self._get_pool()
+        uid = uuid.UUID(doc_id)
+
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    delete
+                    from json_chunks
+                    where id = %s
+                    """,
+                    (uid,),
+                )
+                deleted_rows = cur.rowcount
+            await conn.commit()
+
+        return deleted_rows > 0
+
     async def create_document_stream(
         self,
         namespace: str,
