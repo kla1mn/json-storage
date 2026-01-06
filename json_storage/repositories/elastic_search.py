@@ -33,10 +33,9 @@ class ElasticSearchDBRepository:
 
     @classmethod
     def _get_real_index(cls, namespace: str) -> str:
-        real_index = cls.NAMESPACES.get(namespace)
-        if not real_index:
-            raise RuntimeError(f'Не существует namespace: {namespace}')
-        return real_index
+        # В docker app и worker не делят память, поэтому не падаем,
+        # а считаем, что физический индекс = namespace.
+        return cls.NAMESPACES.setdefault(namespace, namespace)
 
     @classmethod
     async def reindex_namespace(
@@ -86,15 +85,13 @@ class ElasticSearchDBRepository:
             if not exists:
                 await client.indices.create(index=real_index, body=mappings)
                 return
-            if namespace in self.REINDEX_NAMESPACES:
-                raise ReindexNamespaceYetError
 
-            from json_storage.tasks import reindex_namespace
-
-            self.REINDEX_NAMESPACES[namespace] = None
-            await reindex_namespace.kiq(
-                index=real_index, real_namespace=namespace, mappings=mappings
+            # Вместо фонового reindex — обновляем mapping на месте
+            await client.indices.put_mapping(
+                index=real_index,
+                body=mappings.get('mappings', mappings),
             )
+            return
 
     async def insert_document(
         self,
@@ -174,3 +171,11 @@ class ElasticSearchDBRepository:
                 index=real_index, body=body, size=size, from_=from_
             )
             return [hit['_source'] for hit in resp.body['hits']['hits']]
+
+    async def search_ids_in_index(
+            self, namespace: str, body: dict, size: int = 10, from_: int = 0
+    ) -> list[str]:
+        real_index = self._get_real_index(namespace)
+        async with self.get_client() as client:
+            resp = await client.search(index=real_index, body=body, size=size, from_=from_)
+            return [hit['_id'] for hit in resp.body['hits']['hits']]

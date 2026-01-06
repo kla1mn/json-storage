@@ -1,3 +1,5 @@
+import asyncio
+import sys
 from typing import AsyncGenerator
 
 import pytest_asyncio
@@ -11,6 +13,10 @@ from json_storage.settings import settings
 DSN = settings.postgres.dsn
 
 pytest_plugins = ('tests.fixtures.db',)
+
+
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 @pytest.fixture(autouse=True)
