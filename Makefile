@@ -33,3 +33,7 @@ up:
 
 down:
 	docker compose down
+
+# если добавили новые графики, надо это сбацать
+grafana_update:
+	docker compose restart grafana
