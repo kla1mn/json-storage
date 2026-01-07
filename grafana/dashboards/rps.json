@@ -14,7 +14,7 @@
         "label": "Handler",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(http_requests_total, handler)",
+        "query": "label_values(http_requests_total{handler!=\"/metrics\",handler!=\"none\"}, handler)",
         "refresh": 1,
         "includeAll": true,
         "multi": true,
@@ -33,7 +33,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_requests_total[1m]))",
+          "expr": "sum(rate(http_requests_total{handler!=\"/metrics\"}[1m]))",
           "legendFormat": "total"
         }
       ]
@@ -47,7 +47,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (handler) (rate(http_requests_total{handler=~\"$handler\"}[1m]))",
+          "expr": "sum by (handler) (rate(http_requests_total{handler=~\"$handler\",handler!=\"/metrics\"}[1m]))",
           "legendFormat": "{{handler}}"
         }
       ]
