@@ -1,5 +1,5 @@
 {
-  "uid": "json-storage-postgres",
+  "uid": "postgres",
   "title": "json-storage / Postgres Metrics",
   "timezone": "browser",
   "schemaVersion": 1,

@@ -1,5 +1,5 @@
 {
-  "uid": "json-storage-elastic",
+  "uid": "elastic",
   "title": "json-storage / Elastic Metrics",
   "timezone": "browser",
   "schemaVersion": 1,
