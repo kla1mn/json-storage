@@ -2,7 +2,7 @@
   "uid": "json-storage-latency",
   "title": "json-storage / Latency",
   "timezone": "browser",
-  "schemaVersion": 39,
+  "schemaVersion": 1,
   "version": 1,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },

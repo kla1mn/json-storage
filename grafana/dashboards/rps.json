@@ -2,7 +2,7 @@
   "uid": "json-storage-rps",
   "title": "json-storage / RPS",
   "timezone": "browser",
-  "schemaVersion": 39,
+  "schemaVersion": 1,
   "version": 2,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
