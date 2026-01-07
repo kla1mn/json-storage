@@ -33,7 +33,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_requests_total{handler!=\"/metrics\"}[1m]))",
+          "expr": "sum(rate(http_requests_total{handler!=\"/metrics\",handler!=\"none\"}[1m]))",
           "legendFormat": "total"
         }
       ]
@@ -47,8 +47,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (handler) (rate(http_requests_total{handler=~\"$handler\",handler!=\"/metrics\"}[1m]))",
-          "legendFormat": "{{handler}}"
+          "expr": "sum by (method, handler) (rate(http_requests_total{handler=~\"$handler\",handler!=\"/metrics\",method!=\"OPTIONS\"}[1m]))",
+          "legendFormat": "{{method}} {{handler}}"
         }
       ]
     }
