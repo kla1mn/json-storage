@@ -1,0 +1,18 @@
+filebeat.inputs:
+  - type: filestream
+    id: docker-containers
+    prospector.scanner.symlinks: true
+    parsers:
+      - container: ~
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_docker_metadata: ~
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elastic-logs:9200"]
+
+setup.kibana:
+  host: "http://kibana:5601"
