@@ -4,7 +4,11 @@ from dishka.integrations.taskiq import inject
 import json
 from typing import Any
 from json_storage.cmd.taskiq_broker import taskiq_broker
-from json_storage.repositories import ElasticSearchDBRepository, PostgresDBRepository
+from json_storage.repositories import (
+    ElasticSearchDBRepository,
+    PostgresDBRepository,
+    RedisDBRepository,
+)
 import asyncio
 
 MappingsType = dict[str, Any]
@@ -57,8 +61,12 @@ async def insert_in_reindex_namespace(
     doc_id: str,
     document: JSONType,
     elastic_repo: FromDishka[ElasticSearchDBRepository],
+    redis_repo: FromDishka[RedisDBRepository],
 ) -> None:
-    if not (index := elastic_repo.REINDEX_NAMESPACES.get(real_namespace)):
+    index = await redis_repo.get_from_dict(
+        elastic_repo.REINDEX_NAMESPACES_DICT_NAME, real_namespace
+    )
+    if not index:
         await asyncio.sleep(3)
         raise RuntimeError('Ждем, когда инициализируется индекс.')
     await elastic_repo.insert_in_index(index, doc_id, document)

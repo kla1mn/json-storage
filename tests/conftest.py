@@ -2,8 +2,9 @@ from typing import AsyncGenerator
 
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
+from redis.asyncio import Redis
+
 from json_storage.cmd.taskiq_broker import taskiq_broker
-from json_storage.services import MultiRepositoryService
 import psycopg
 import pytest
 from json_storage.settings import settings
@@ -37,9 +38,6 @@ def cleanup_postgres_after_test():
 
         conn.commit()
 
-    MultiRepositoryService.NAMESPACES.clear()
-    MultiRepositoryService.SEARCH_SCHEMAS.clear()
-
 
 @pytest_asyncio.fixture(autouse=True)
 async def cleanup_elasticsearch_after_test(es_client):
@@ -60,9 +58,33 @@ async def cleanup_elasticsearch_after_test(es_client):
             await es_client.indices.delete(index=index_name, ignore_unavailable=True)
 
     except Exception as e:
-        # Если нет индексов с префиксом test-*, просто игнорируем
+        # Если нет индексов с*, просто игнорируем
         if 'index_not_found_exception' not in str(e):
             print(f'Warning: Failed to cleanup Elasticsearch indices: {e}')
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup_redis_after_test():
+    """
+    Фикстура для полной очистки Redis после каждого теста.
+    Удаляет ВСЕ данные из текущей базы Redis.
+    """
+    # Код до yield выполняется перед тестом
+    yield
+    # Код после yield выполняется после теста
+
+    try:
+        # Подключаемся к Redis
+        redis_client = Redis.from_url('redis://localhost:6379', decode_responses=True)
+
+        # Очищаем текущую базу данных
+        await redis_client.flushdb()
+
+        # Закрываем соединение
+        await redis_client.close()
+
+    except Exception as e:
+        print(f'Warning: Failed to cleanup Redis: {e}')
 
 
 @pytest.fixture

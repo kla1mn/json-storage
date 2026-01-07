@@ -7,7 +7,7 @@ async def _body_bytes(raw: bytes):
 
 @pytest.mark.asyncio
 async def test_insert_document_in_reindex_namespace(
-    multi_repository_service, elasticsearch_repo, es_client
+    multi_repository_service, elasticsearch_repo, es_client, redis_repo
 ):
     # Вставляем документ
     namespace_for_test = 'test-namespace'
@@ -25,7 +25,9 @@ async def test_insert_document_in_reindex_namespace(
         'name': '$.name',
     }
     await multi_repository_service.set_search_schema(namespace_for_test, search_schema)
-    created_index = elasticsearch_repo.NAMESPACES.get(namespace_for_test)
+    created_index = await redis_repo.get_from_dict(
+        elasticsearch_repo.MAPPING_NAMESPACE_INDEX_DICT_NAME, namespace_for_test
+    )
     assert created_index
 
     # Проверяем, что поисковая схема действительно установилась
@@ -57,7 +59,9 @@ async def test_insert_document_in_reindex_namespace(
     }
     async with elasticsearch_repo.get_client() as client:
         await client.indices.create(index=new_index, body=mappings)
-    elasticsearch_repo.REINDEX_NAMESPACES[namespace_for_test] = new_index
+    await redis_repo.add_to_dict(
+        elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, namespace_for_test, new_index
+    )
 
     # Вставляем новый документ
     new_document = b'{"a": "42", "name": "Hi", "mau": "miu"}'
