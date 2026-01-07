@@ -1,0 +1,33 @@
+{
+  "uid": "json-storage-elastic",
+  "title": "json-storage / Elastic Metrics",
+  "timezone": "browser",
+  "schemaVersion": 1,
+  "version": 1,
+  "refresh": "5s",
+  "tags": ["json-storage"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "title": "Elastic Cluster Health",
+      "targets": [
+        {
+          "expr": "json_storage_elastic_cluster_health"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "title": "Elastic Index Store Size in bytes",
+      "targets": [
+        {
+          "expr": "json_storage_elastic_index_store_size_bytes"
+        }
+      ]
+    }
+  ]
+}

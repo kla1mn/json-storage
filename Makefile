@@ -35,5 +35,9 @@ down:
 	docker compose down
 
 # если добавили новые графики, надо это сбацать
-grafana_update:
+update_grafana:
 	docker compose restart grafana
+
+hard_restart:
+	docker compose down -v
+	docker compose up -d --build
