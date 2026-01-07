@@ -10,11 +10,19 @@ from dishka.integrations.fastapi import FastapiProvider
 from dishka.integrations.taskiq import setup_dishka as taskiq_setup_dishka
 from dishka.integrations.taskiq import TaskiqProvider
 from .container import ContainerManager
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 def create_fastapi_app() -> FastAPI:
     app = FastAPI(title='json-storage', docs_url='/docs', openapi_url='/docs.json')
     app.include_router(router)
+
+    Instrumentator().instrument(app).expose(
+        app,
+        endpoint='/metrics',
+        include_in_schema=False,
+    )
+
     application_providers = [FastapiProvider(), provider]
     container = ContainerManager.create(application_providers)
     fastapi_setup_dishka(container, app)

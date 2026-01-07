@@ -1,0 +1,50 @@
+{
+  "uid": "json-storage-rps-latency",
+  "title": "json-storage / RPS & Latency",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "tags": ["json-storage"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "RPS (all requests)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_requests_total[1m]))",
+          "legendFormat": "rps"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency p50 / p95 / p99 (seconds)",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    }
+  ]
+}
