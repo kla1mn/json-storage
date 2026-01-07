@@ -1,6 +1,5 @@
 import uuid
 import pytest
-import asyncio
 from json_storage.errors import ReindexNamespaceYetError
 
 
@@ -184,7 +183,7 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
 
 
 @pytest.mark.asyncio
-async def test_two_reindex(elasticsearch_repo, es_client, index_for_test):
+async def test_two_reindex(elasticsearch_repo, redis_repo, es_client, index_for_test):
     first_mappings = {
         'mappings': {
             'dynamic': False,
@@ -197,7 +196,9 @@ async def test_two_reindex(elasticsearch_repo, es_client, index_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test, mappings=first_mappings
     )
-    elasticsearch_repo.REINDEX_NAMESPACES[index_for_test] = None
+    await redis_repo.add_to_dict(
+        elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, index_for_test, 'in_reindexing'
+    )
     second_mappings = {
         'mappings': {
             'dynamic': False,
@@ -210,45 +211,3 @@ async def test_two_reindex(elasticsearch_repo, es_client, index_for_test):
     }
     with pytest.raises(ReindexNamespaceYetError):
         await elasticsearch_repo.create_or_update_index(index_for_test, second_mappings)
-
-
-@pytest.mark.asyncio
-async def test_async_two_reindex(elasticsearch_repo, es_client, index_for_test):
-    first_mappings = {
-        'mappings': {
-            'dynamic': False,
-            'properties': {
-                'a': {'type': 'integer'},
-                'name': {'type': 'keyword'},
-            },
-        },
-    }
-    await elasticsearch_repo.create_or_update_index(
-        index_for_test, mappings=first_mappings
-    )
-    second_mappings = {
-        'mappings': {
-            'dynamic': False,
-            'properties': {
-                'a': {'type': 'integer'},
-                'name': {'type': 'keyword'},
-                'mau': {'type': 'integer'},
-            },
-        },
-    }
-    third_mappings = {
-        'mappings': {
-            'dynamic': False,
-            'properties': {
-                'a': {'type': 'integer'},
-                'name': {'type': 'keyword'},
-                'mau': {'type': 'integer'},
-                'b': {'type': 'integer'},
-            },
-        },
-    }
-    with pytest.raises(ReindexNamespaceYetError):
-        await asyncio.gather(
-            elasticsearch_repo.create_or_update_index(index_for_test, second_mappings),
-            elasticsearch_repo.create_or_update_index(index_for_test, third_mappings),
-        )

@@ -43,7 +43,8 @@ class PostgresDBRepository:
                     """
                     create table if not exists json_buffer (
                         id uuid primary key,
-                        content bytea not null
+                        content bytea not null,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     """
                 )

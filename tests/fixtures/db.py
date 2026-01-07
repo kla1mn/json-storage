@@ -3,7 +3,11 @@ from typing import AsyncIterator
 
 from dishka import AsyncContainer
 from json_storage.container import get_container
-from json_storage.repositories import PostgresDBRepository, ElasticSearchDBRepository
+from json_storage.repositories import (
+    PostgresDBRepository,
+    ElasticSearchDBRepository,
+    RedisDBRepository,
+)
 from json_storage.services import MultiRepositoryService
 from json_storage.depends import provider
 
@@ -22,6 +26,11 @@ async def postgres_repo(container: AsyncContainer) -> PostgresDBRepository:
 @pytest_asyncio.fixture
 async def elasticsearch_repo(container: AsyncContainer) -> ElasticSearchDBRepository:
     return await container.get(ElasticSearchDBRepository)
+
+
+@pytest_asyncio.fixture
+async def redis_repo(container: AsyncContainer) -> RedisDBRepository:
+    return await container.get(RedisDBRepository)
 
 
 @pytest_asyncio.fixture
