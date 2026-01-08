@@ -11,9 +11,13 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-      - elastic-data
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      elastic-data:
+        condition: service_healthy
+    restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -23,6 +27,12 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   postgres:
     image: postgres:16-alpine
@@ -35,6 +45,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U json -d jsonstorage"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   elastic-data:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.2
@@ -48,6 +63,11 @@ services:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow\\&timeout=1s >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   redis:
     container_name: redis
