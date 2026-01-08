@@ -16,7 +16,7 @@ DSN = settings.postgres.dsn
 pytest_plugins = ('tests.fixtures.db',)
 
 
-if sys.platform.startswith("win"):
+if sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 

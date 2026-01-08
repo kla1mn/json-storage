@@ -3,17 +3,21 @@ import os
 
 from json_storage.bootstrap import create_fastapi_app
 from json_storage.cmd.taskiq_broker import taskiq_broker
-from json_storage.storage_metrics import collect_postgres_metrics, collect_elastic_metrics, collect_indexing_lag
+from json_storage.storage_metrics import (
+    collect_postgres_metrics,
+    collect_elastic_metrics,
+)
 
-SLEEP_INTERVAL = int(os.getenv("METRICS__COLLECT_INTERVAL_SECONDS", 30))
+SLEEP_INTERVAL = int(os.getenv('METRICS__COLLECT_INTERVAL_SECONDS', 30))
 
 app = create_fastapi_app()
+
 
 async def start_metric_collection():
     while True:
         await collect_postgres_metrics()
         await collect_elastic_metrics()
-        #await collect_indexing_lag()
+        # await collect_indexing_lag()
         await asyncio.sleep(SLEEP_INTERVAL)
 
 
