@@ -16,4 +16,8 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["uv", "run", "granian", "--interface", "asgi", "--host", "0.0.0.0", "--port", "8080", "json_storage.cmd.rest:app"]
+CMD ["/app/.venv/bin/granian", \
+     "--interface", "asgi", \
+     "--host", "0.0.0.0", \
+     "--port", "8080", \
+     "json_storage.cmd.rest:app"]
