@@ -98,7 +98,11 @@ class MultiRepositoryService:
         )
 
     async def search_objects(
-        self, namespace: str, filters: str
+        self,
+        namespace: str,
+        filters: str,
+        size: int = 50,
+        from_: int = 0,
     ) -> list[dict[str, Any]]:
         schema = await self.redis_repository.get_from_dict(
             self.SEARCH_SCHEMAS_DICT_NAME, namespace
@@ -110,17 +114,19 @@ class MultiRepositoryService:
         ids = await self.elastic_repository.search_ids_in_index(
             namespace=namespace,
             body=query,
-            size=50,
-            from_=0,
+            size=size,
+            from_=from_,
         )
-        metas = await asyncio.gather(
+        metas: list[DocumentSchema | None] = await asyncio.gather(
             *[
                 self.postgres_repository.get_document_meta(namespace, doc_id)
                 for doc_id in ids
             ]
         )
 
-        return [m for m in metas if m is not None]
+        return [
+            m.model_dump(mode='json', by_alias=True) for m in metas if m is not None
+        ]
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if not await self.redis_repository.check_in_set(
