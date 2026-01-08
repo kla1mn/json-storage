@@ -87,14 +87,14 @@ async def set_search_schema(
     return Response(status_code=204)
 
 
-@router.post('/{namespace}/search', response_model=list[dict[str, Any]])
+@router.post('/{namespace}/search', response_model=list[DocumentSchema])
 async def search_objects(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
     filters: str = Body(..., description='Фильтры поиска'),
-) -> JSONResponse:
-    result = await multi_repo.search_objects(namespace, filters)
-    return JSONResponse(content=result)
+) -> list[dict]:
+    docs = await multi_repo.search_objects(namespace, filters)
+    return [d.model_dump(mode='json', by_alias=True) for d in docs]
 
 
 @router.get('/{namespace}', response_model=DocumentListSchema)

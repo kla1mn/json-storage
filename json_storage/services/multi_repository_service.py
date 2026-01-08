@@ -107,12 +107,17 @@ class MultiRepositoryService:
             raise HTTPException(400, 'Поисковая схема не установлена')
         query = DSLTranslator.build_query_from_expression(filters)
 
-        resp = await self.elastic_repository.search_in_index(
+        ids = await self.elastic_repository.search_ids_in_index(
             namespace=namespace,
             body=query,
+            size=50,
+            from_=0,
+        )
+        metas = await asyncio.gather(
+            *[self.postgres_repository.get_document_meta(namespace, doc_id) for doc_id in ids]
         )
 
-        return resp
+        return [m for m in metas if m is not None]
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if not await self.redis_repository.check_in_set(
