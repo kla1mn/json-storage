@@ -6,7 +6,6 @@ from taskiq import InMemoryBroker
 from fastapi.middleware.cors import CORSMiddleware
 from .router import router
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from dishka.integrations.fastapi import setup_dishka as fastapi_setup_dishka
 from dishka.integrations.fastapi import FastapiProvider
 from dishka.integrations.taskiq import setup_dishka as taskiq_setup_dishka
@@ -18,27 +17,13 @@ from prometheus_fastapi_instrumentator import Instrumentator
 def create_fastapi_app() -> FastAPI:
     app = FastAPI(title='json-storage', docs_url='/docs', openapi_url='/docs.json')
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-        ],
-        allow_credentials=True,
-        allow_methods=['*'],
-        allow_headers=['*'],
-    )
-
     app.include_router(router)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5350",
-            "http://127.0.0.1:5350",
-        ],
+        allow_origins=['*'],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=['*'],
+        allow_headers=['*'],
     )
 
     Instrumentator().instrument(app).expose(

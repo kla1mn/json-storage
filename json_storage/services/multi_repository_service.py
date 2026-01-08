@@ -114,7 +114,10 @@ class MultiRepositoryService:
             from_=0,
         )
         metas = await asyncio.gather(
-            *[self.postgres_repository.get_document_meta(namespace, doc_id) for doc_id in ids]
+            *[
+                self.postgres_repository.get_document_meta(namespace, doc_id)
+                for doc_id in ids
+            ]
         )
 
         return [m for m in metas if m is not None]

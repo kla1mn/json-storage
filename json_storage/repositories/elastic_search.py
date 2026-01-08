@@ -191,9 +191,11 @@ class ElasticSearchDBRepository:
             return [hit['_source'] for hit in resp.body['hits']['hits']]
 
     async def search_ids_in_index(
-            self, namespace: str, body: dict, size: int = 10, from_: int = 0
+        self, namespace: str, body: dict, size: int = 10, from_: int = 0
     ) -> list[str]:
-        real_index = self._get_real_index(namespace)
+        real_index = await self._get_real_index(namespace)
         async with self.get_client() as client:
-            resp = await client.search(index=real_index, body=body, size=size, from_=from_)
+            resp = await client.search(
+                index=real_index, body=body, size=size, from_=from_
+            )
             return [hit['_id'] for hit in resp.body['hits']['hits']]
