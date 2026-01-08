@@ -5,7 +5,10 @@ import logging
 from json_storage.logging_conf import setup_logging
 from json_storage.bootstrap import create_fastapi_app
 from json_storage.cmd.taskiq_broker import taskiq_broker
-from json_storage.storage_metrics import collect_postgres_metrics, collect_elastic_metrics, collect_indexing_lag
+from json_storage.storage_metrics import (
+    collect_postgres_metrics,
+    collect_elastic_metrics,
+)
 
 setup_logging()
 logger = logging.getLogger(__name__)

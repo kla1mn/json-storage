@@ -16,16 +16,14 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 def create_fastapi_app() -> FastAPI:
     app = FastAPI(title='json-storage', docs_url='/docs', openapi_url='/docs.json')
+
     app.include_router(router)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5350",
-            "http://127.0.0.1:5350",
-        ],
+        allow_origins=['*'],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=['*'],
+        allow_headers=['*'],
     )
 
     Instrumentator().instrument(app).expose(
