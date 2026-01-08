@@ -64,6 +64,7 @@ def test_schema_to_es_mapping_only_simple_fields():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'status': {'type': 'keyword'},
                 'user.id': {'type': 'keyword'},
@@ -82,6 +83,7 @@ def test_schema_to_es_mapping_simple_and_nested():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'status': {'type': 'keyword'},
                 'items': {
@@ -104,6 +106,7 @@ def test_schema_to_es_mapping_array_of_primitives_not_nested():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'tags': {'type': 'keyword'},
             }
@@ -213,6 +216,7 @@ def test_schema_to_es_mapping_dict_entry_defaults_to_keyword():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'status': {'type': 'keyword'},
             }
@@ -230,6 +234,7 @@ def test_schema_to_es_mapping_inline_mapping_simple_field():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'price': {'type': 'double'},
                 'status': {'type': 'keyword'},
@@ -256,6 +261,7 @@ def test_schema_to_es_mapping_explicit_mapping_simple_field():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'title': {
                     'type': 'text',
@@ -278,6 +284,7 @@ def test_schema_to_es_mapping_inline_mapping_nested_leaf():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'items': {
                     'type': 'nested',
@@ -306,6 +313,7 @@ def test_schema_to_es_mapping_explicit_mapping_nested_leaf():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'items': {
                     'type': 'nested',
@@ -340,6 +348,7 @@ def test_schema_to_es_mapping_merge_nested_container_mapping_with_generated_prop
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'items': {
                     'type': 'nested',
@@ -363,6 +372,7 @@ def test_schema_to_es_mapping_json_path_alias_supported_and_not_leaked():
 
     assert mapping == {
         'mappings': {
+            'dynamic': False,
             'properties': {
                 'price': {'type': 'double'},
             }
