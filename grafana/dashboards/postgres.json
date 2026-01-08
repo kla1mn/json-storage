@@ -1,0 +1,33 @@
+{
+  "uid": "postgres",
+  "title": "json-storage / Postgres Metrics",
+  "timezone": "browser",
+  "schemaVersion": 1,
+  "version": 1,
+  "refresh": "5s",
+  "tags": ["json-storage"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Postgres DB Size in bytes",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "json_storage_postgres_database_size_bytes"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Postgres Connections",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "json_storage_postgres_connections"
+        }
+      ]
+    }
+  ]
+}

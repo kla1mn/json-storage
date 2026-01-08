@@ -202,3 +202,218 @@ def test_build_query_grouped_and_or():
             }
         }
     }
+
+def test_schema_to_es_mapping_dict_entry_defaults_to_keyword():
+    search_schema = {
+        "status": {"path": "$.status"},
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "status": {"type": "keyword"},
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_inline_mapping_simple_field():
+    search_schema = {
+        "price": {"path": "$.price", "type": "double"},
+        "status": "$.status",  # старый режим должен остаться keyword
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "price": {"type": "double"},
+                "status": {"type": "keyword"},
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_explicit_mapping_simple_field():
+    search_schema = {
+        "title": {
+            "path": "$.title",
+            "mapping": {
+                "type": "text",
+                "analyzer": "russian",
+                "fields": {
+                    "keyword": {"type": "keyword", "ignore_above": 256},
+                },
+            },
+        },
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "title": {
+                    "type": "text",
+                    "analyzer": "russian",
+                    "fields": {
+                        "keyword": {"type": "keyword", "ignore_above": 256},
+                    },
+                },
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_inline_mapping_nested_leaf():
+    search_schema = {
+        "itemPrice": {"path": "$.items[*].price", "type": "double"},
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "items": {
+                    "type": "nested",
+                    "properties": {
+                        "price": {"type": "double"},
+                    },
+                }
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_explicit_mapping_nested_leaf():
+    search_schema = {
+        "itemTitle": {
+            "path": "$.items[*].title",
+            "mapping": {
+                "type": "text",
+                "analyzer": "standard",
+                "fields": {"keyword": {"type": "keyword"}},
+            },
+        },
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "items": {
+                    "type": "nested",
+                    "properties": {
+                        "title": {
+                            "type": "text",
+                            "analyzer": "standard",
+                            "fields": {"keyword": {"type": "keyword"}},
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_merge_nested_container_mapping_with_generated_props():
+    search_schema = {
+        "items": {
+            "path": "$.items[*]",
+            "type": "nested",
+            "dynamic": "strict",
+            "properties": {
+                "legacy": {"type": "keyword"},
+                "price": {"type": "integer"},
+            },
+        },
+        "itemPrice": {"path": "$.items[*].price", "type": "double"},
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "items": {
+                    "type": "nested",
+                    "dynamic": "strict",
+                    "properties": {
+                        "legacy": {"type": "keyword"},
+                        "price": {"type": "double"},
+                    },
+                }
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_json_path_alias_supported_and_not_leaked():
+    search_schema = {
+        "price": {"json_path": "$.price", "type": "double"},
+    }
+
+    mapping = DSLTranslator.schema_to_es_mapping(search_schema)
+
+    assert mapping == {
+        "mappings": {
+            "properties": {
+                "price": {"type": "double"},
+            }
+        }
+    }
+
+
+def test_schema_to_es_mapping_dict_without_path_raises():
+    search_schema = {
+        "price": {"type": "double"},
+    }
+
+    try:
+        DSLTranslator.schema_to_es_mapping(search_schema)
+        assert False, "Expected ValueError"
+    except ValueError:
+        assert True
+
+
+def test_schema_to_es_mapping_explicit_mapping_must_be_dict_raises():
+    search_schema = {
+        "title": {"path": "$.title", "mapping": "text"},
+    }
+
+    try:
+        DSLTranslator.schema_to_es_mapping(search_schema)
+        assert False, "Expected TypeError"
+    except TypeError:
+        assert True
+
+
+def test_schema_to_es_mapping_invalid_entry_type_raises():
+    search_schema = {
+        "price": 123,
+    }
+
+    try:
+        DSLTranslator.schema_to_es_mapping(search_schema)
+        assert False, "Expected TypeError"
+    except TypeError:
+        assert True
+
+
+def test_schema_to_es_mapping_nested_container_conflicting_type_raises():
+    search_schema = {
+        "items": {"path": "$.items[*]", "type": "object"},
+        "itemPrice": {"path": "$.items[*].price", "type": "double"},
+    }
+
+    try:
+        DSLTranslator.schema_to_es_mapping(search_schema)
+        assert False, "Expected ValueError"
+    except ValueError:
+        assert True
+

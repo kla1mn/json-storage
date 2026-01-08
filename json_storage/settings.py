@@ -15,6 +15,7 @@ class SettingsSchema(BaseSettings):
     elastic_search: DsnSettingsSchema
     postgres: DsnSettingsSchema
     rabbit_mq: DsnSettingsSchema
+    redis: DsnSettingsSchema
     environment: str = EnvironmentEnum.LOCAL
     model_config = SettingsConfigDict(
         env_file='.env',
