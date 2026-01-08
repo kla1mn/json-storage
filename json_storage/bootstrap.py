@@ -1,5 +1,6 @@
 from aio_pika import ExchangeType
 from json_storage.settings import settings, EnvironmentEnum
+from .const import NS_LATENCY_BUCKETS
 from .depends import provider
 from taskiq_aio_pika import AioPikaBroker
 from taskiq import InMemoryBroker
@@ -11,7 +12,30 @@ from dishka.integrations.fastapi import FastapiProvider
 from dishka.integrations.taskiq import setup_dishka as taskiq_setup_dishka
 from dishka.integrations.taskiq import TaskiqProvider
 from .container import ContainerManager
-from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+
+
+def configure_metrics(app: FastAPI) -> None:
+    instrumentator = Instrumentator(
+        excluded_handlers=['/metrics'],
+    )
+
+    instrumentator.add(metrics.default())
+    instrumentator.add(
+        metrics.latency(
+            buckets=NS_LATENCY_BUCKETS,
+            should_include_handler=True,
+            should_include_method=True,
+            metric_namespace='ns',
+            metric_subsystem='json_storage',
+        )
+    )
+
+    instrumentator.instrument(app).expose(
+        app,
+        endpoint='/metrics',
+        include_in_schema=False,
+    )
 
 
 def create_fastapi_app() -> FastAPI:
@@ -26,11 +50,7 @@ def create_fastapi_app() -> FastAPI:
         allow_headers=['*'],
     )
 
-    Instrumentator().instrument(app).expose(
-        app,
-        endpoint='/metrics',
-        include_in_schema=False,
-    )
+    configure_metrics(app)
 
     application_providers = [FastapiProvider(), provider]
     container = ContainerManager.create(application_providers)

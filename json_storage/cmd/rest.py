@@ -13,9 +13,10 @@ from json_storage.storage_metrics import (
 setup_logging()
 logger = logging.getLogger(__name__)
 
-SLEEP_INTERVAL = int(os.getenv("METRICS__COLLECT_INTERVAL_SECONDS", 30))
+SLEEP_INTERVAL = int(os.getenv('METRICS__COLLECT_INTERVAL_SECONDS', 30))
 
 app = create_fastapi_app()
+
 
 async def start_metric_collection():
     while True:
@@ -27,12 +28,12 @@ async def start_metric_collection():
 
 @app.on_event('startup')
 async def _startup() -> None:
-    logger.info("startup")
+    logger.info('startup')
     await taskiq_broker.startup()
     asyncio.create_task(start_metric_collection())
 
 
 @app.on_event('shutdown')
 async def _shutdown() -> None:
-    logger.info("shutdown")
+    logger.info('shutdown')
     await taskiq_broker.shutdown()
