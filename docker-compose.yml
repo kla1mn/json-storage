@@ -21,6 +21,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
 
   postgres:
     image: postgres:16-alpine
@@ -81,3 +83,4 @@ volumes:
   pgdata:
   esdata:
   grafana-data:
+  rabbitmq-data:

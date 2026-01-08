@@ -49,7 +49,14 @@ def create_taskiq_broker() -> AioPikaBroker:
             exchange_type=ExchangeType.DIRECT,
             dead_letter_queue_name='taskiq_dlx',
             declare_exchange=True,
+            declare_exchange_kwargs={"durable": True},
             declare_queues=True,
+            declare_queues_kwargs={
+                "durable": True,
+                "arguments": {
+                    "x-queue-type": "quorum",
+                },
+            },
             routing_key='taskiq',
         )
     application_providers = [TaskiqProvider(), provider]
