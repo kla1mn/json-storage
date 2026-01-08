@@ -92,9 +92,17 @@ async def search_objects(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
     filters: str = Body(..., description='Фильтры поиска'),
+    size: int = Query(
+        50,
+        ge=1,
+        le=100,
+        description='Максимальное число объектов в ответе (по умолчанию 50, макс 100)',
+    ),
+    from_: int | None = Query(
+        0,
+    ),
 ) -> list[dict]:
-    docs = await multi_repo.search_objects(namespace, filters)
-    return [d.model_dump(mode='json', by_alias=True) for d in docs]
+    return await multi_repo.search_objects(namespace, filters, size, from_)
 
 
 @router.get('/{namespace}', response_model=DocumentListSchema)
