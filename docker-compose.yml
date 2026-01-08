@@ -18,6 +18,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    environment:
+      RABBITMQ_LOGS: "-"
+      RABBITMQ_SASL_LOGS: "-"
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -29,6 +32,16 @@ services:
       POSTGRES_DB: jsonstorage
       POSTGRES_USER: json
       POSTGRES_PASSWORD: json
+    command:
+      - postgres
+      - -c
+      - log_min_duration_statement=0
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - "log_line_prefix=%m [%p] %u@%d %r"
     ports:
       - "5432:5432"
     volumes:
@@ -41,6 +54,9 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - cluster.name=es-data
+      - logger.org.elasticsearch.http.HttpTracer=TRACE
+      - http.tracer.include="*"
+      - http.tracer.exclude="/_cluster/health*,/_nodes*,/_cat*"
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"
@@ -68,6 +84,11 @@ services:
     ports:
       - "3000:3000"
     environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_BASIC_ENABLED: "false"
+
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
