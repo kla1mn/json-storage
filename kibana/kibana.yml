@@ -1,0 +1,3 @@
+uiSettings:
+  overrides:
+    defaultRoute: "/app/discover#/view/docker-logs"
