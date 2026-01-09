@@ -142,12 +142,18 @@ services:
       - "5601:5601"
     depends_on:
       - elastic-logs
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:5601/api/status >/dev/null || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   kibana-init:
-    image: python:3.14-slim
+    build: .
     container_name: kibana-init
     depends_on:
-      - kibana
+      kibana:
+        condition: service_healthy
     environment:
       KIBANA_URL: "http://kibana:5601"
       DATA_VIEW_TITLE: "filebeat-*"
@@ -155,8 +161,8 @@ services:
       SAVED_SEARCH_ID: "docker-logs"
       SAVED_SEARCH_TITLE: "Logs: @timestamp + message"
     volumes:
-      - ./kibana/provision.py:/provision.py:ro
-    command: ["python", "/provision.py"]
+      - ./kibana/provision.py:/app/kibana/provision.py:ro
+    command: ["python3", "/app/kibana/provision.py"]
     restart: "no"
 
   filebeat:
@@ -190,8 +196,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command:
-      ["uv", "run", "taskiq", "worker",
-      "json_storage.cmd.taskiq_broker:taskiq_broker", "json_storage.tasks", "--log-level=DEBUG"]
+      [ "/app/.venv/bin/taskiq", "worker",
+        "json_storage.cmd.taskiq_broker:taskiq_broker", "json_storage.tasks", "--log-level=DEBUG" ]
 
 volumes:
   pgdata:
