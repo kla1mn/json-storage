@@ -1,0 +1,50 @@
+filebeat.inputs:
+  - type: filestream
+    id: docker-containers
+    prospector.scanner.symlinks: true
+    parsers:
+      - container: ~
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_docker_metadata: ~
+
+  - copy_fields:
+      fields:
+        - from: container.name
+          to: service.name
+      ignore_missing: true
+      fail_on_error: false
+
+  - drop_event:
+      when:
+        not:
+          or:
+            - equals:
+                container.name: "json-storage"
+            - equals:
+                container.name: "postgres"
+            - equals:
+                container.name: "elastic-data"
+            - equals:
+                container.name: "rabbitmq"
+            - equals:
+                container.name: "redis"
+
+  - decode_json_fields:
+      when:
+        equals:
+          container.name: "json-storage"
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      add_error_key: true
+
+  - add_host_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elastic-logs:9200"]
+
+setup.kibana:
+  host: "http://kibana:5601"
