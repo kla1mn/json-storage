@@ -71,7 +71,5 @@ async def test_get_object_body_reads_from_elastic(
         document_name='doc',
     )
 
-    body = await multi_repository_service.get_object_body(
-        namespace, uuid.UUID(str(obj_id))
-    )
+    body = await multi_repository_service.get_object_body(namespace, uuid.UUID(str(obj_id)))
     assert body == json.loads(raw)

@@ -13,7 +13,9 @@ from json_storage.repositories import (
     ElasticSearchDBRepository,
     RedisDBRepository,
 )
-from json_storage.schemas import DocumentListSchema, DocumentSchema
+from json_storage.schemas import DocumentListSchema, DocumentSchema, ProgressBarSchema
+from ..errors import NotExistentReindexTaskError
+from ..schemas.progress_bar import ProgressStatusEnum
 
 JSONType = TypeVar('JSONType', bound=dict[str, Any])
 
@@ -26,11 +28,10 @@ class MultiRepositoryService:
     is_init_chunks_table: ClassVar[bool] = False
     ALL_NAMESPACES_SET_NAME: ClassVar[str] = 'all_namespaces'
     SEARCH_SCHEMAS_DICT_NAME: ClassVar[str] = 'search_schemas'
+    PROGRESS_BAR_DICT_NAME: ClassVar[str] = 'progress_bar'
 
     async def get_object_meta(self, namespace: str, object_id: UUID) -> DocumentSchema:
-        meta = await self.postgres_repository.get_document_meta(
-            namespace, str(object_id)
-        )
+        meta = await self.postgres_repository.get_document_meta(namespace, str(object_id))
         if meta is None:
             raise HTTPException(status_code=404)
         return meta
@@ -54,9 +55,7 @@ class MultiRepositoryService:
         *,
         document_name: str,
     ) -> UUID:
-        if not await self.redis_repository.check_in_set(
-            self.ALL_NAMESPACES_SET_NAME, namespace
-        ):
+        if not await self.redis_repository.check_in_set(self.ALL_NAMESPACES_SET_NAME, namespace):
             await self.create_namespace(namespace)
 
         doc = await self.postgres_repository.create_document_stream(
@@ -82,15 +81,11 @@ class MultiRepositoryService:
         namespace: str,
         search_schema: dict[str, Any],
     ) -> None:
-        set_schema = await self.redis_repository.get_from_dict(
-            self.SEARCH_SCHEMAS_DICT_NAME, namespace
-        )
+        set_schema = await self.redis_repository.get_from_dict(self.SEARCH_SCHEMAS_DICT_NAME, namespace)
         if set_schema and json.loads(set_schema) == search_schema:
             return
         search_schema_json_str = json.dumps(search_schema)
-        await self.redis_repository.add_to_dict(
-            self.SEARCH_SCHEMAS_DICT_NAME, namespace, search_schema_json_str
-        )
+        await self.redis_repository.add_to_dict(self.SEARCH_SCHEMAS_DICT_NAME, namespace, search_schema_json_str)
         mapping = DSLTranslator.schema_to_es_mapping(search_schema)
         await self.elastic_repository.create_or_update_index(
             namespace=namespace,
@@ -104,9 +99,7 @@ class MultiRepositoryService:
         size: int = 50,
         from_: int = 0,
     ) -> list[dict[str, Any]]:
-        schema = await self.redis_repository.get_from_dict(
-            self.SEARCH_SCHEMAS_DICT_NAME, namespace
-        )
+        schema = await self.redis_repository.get_from_dict(self.SEARCH_SCHEMAS_DICT_NAME, namespace)
         if not schema:
             raise HTTPException(400, 'Поисковая схема не установлена')
         query = DSLTranslator.build_query_from_expression(filters)
@@ -118,20 +111,13 @@ class MultiRepositoryService:
             from_=from_,
         )
         metas: list[DocumentSchema | None] = await asyncio.gather(
-            *[
-                self.postgres_repository.get_document_meta(namespace, doc_id)
-                for doc_id in ids
-            ]
+            *[self.postgres_repository.get_document_meta(namespace, doc_id) for doc_id in ids]
         )
 
-        return [
-            m.model_dump(mode='json', by_alias=True) for m in metas if m is not None
-        ]
+        return [m.model_dump(mode='json') for m in metas if m is not None]
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
-        if not await self.redis_repository.check_in_set(
-            self.ALL_NAMESPACES_SET_NAME, namespace
-        ):
+        if not await self.redis_repository.check_in_set(self.ALL_NAMESPACES_SET_NAME, namespace):
             return DocumentListSchema()
         return await self.postgres_repository.list_documents_meta(namespace)
 
@@ -141,18 +127,12 @@ class MultiRepositoryService:
         limit: int,
         cursor: str,
     ) -> DocumentListSchema:
-        if not await self.redis_repository.check_in_set(
-            self.ALL_NAMESPACES_SET_NAME, namespace
-        ):
+        if not await self.redis_repository.check_in_set(self.ALL_NAMESPACES_SET_NAME, namespace):
             return DocumentListSchema()
-        return await self.postgres_repository.list_documents_meta(
-            namespace, limit=limit, cursor=cursor
-        )
+        return await self.postgres_repository.list_documents_meta(namespace, limit=limit, cursor=cursor)
 
     async def get_namespace(self) -> list[str]:
-        return sorted(
-            await self.redis_repository.get_all_from_set(self.ALL_NAMESPACES_SET_NAME)
-        )
+        return sorted(await self.redis_repository.get_all_from_set(self.ALL_NAMESPACES_SET_NAME))
 
     async def create_namespace(self, namespace: str) -> list[str]:
         await asyncio.gather(
@@ -163,6 +143,18 @@ class MultiRepositoryService:
         if not MultiRepositoryService.is_init_chunks_table:
             await self.postgres_repository.create_chunks_table()
             MultiRepositoryService.is_init_chunks_table = True
-        return sorted(
-            await self.redis_repository.get_all_from_set(self.ALL_NAMESPACES_SET_NAME)
+        return sorted(await self.redis_repository.get_all_from_set(self.ALL_NAMESPACES_SET_NAME))
+
+    async def get_progress_bar(
+        self,
+        namespace: str,
+    ) -> ProgressBarSchema:
+        if not (task_id := await self.redis_repository.get_from_dict(self.PROGRESS_BAR_DICT_NAME, namespace)):
+            raise NotExistentReindexTaskError
+        if task_id == ProgressStatusEnum.INIT:
+            return ProgressBarSchema()
+        percent = await self.elastic_repository.get_progress_bar_by_task_id(task_id)
+        return ProgressBarSchema(
+            status=ProgressStatusEnum.PROGRESS if percent != 100 else ProgressStatusEnum.SUCCESS,
+            percent=percent,
         )

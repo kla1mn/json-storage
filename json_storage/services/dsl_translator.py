@@ -89,9 +89,7 @@ class DSLTranslator:
             if isinstance(defn, dict):
                 path = defn.get('path') or defn.get('json_path')
                 if not path:
-                    raise ValueError(
-                        "Schema entry dict must contain string key 'path' (or 'json_path')."
-                    )
+                    raise ValueError("Schema entry dict must contain string key 'path' (or 'json_path').")
 
                 if 'mapping' in defn:
                     mapping = defn['mapping']
@@ -99,25 +97,17 @@ class DSLTranslator:
                         raise TypeError("If provided, 'mapping' must be a dict.")
                     field_mapping = dict(mapping)
                 else:
-                    field_mapping = {
-                        k: v
-                        for k, v in defn.items()
-                        if k not in ('path', 'json_path', 'mapping')
-                    }
+                    field_mapping = {k: v for k, v in defn.items() if k not in ('path', 'json_path', 'mapping')}
 
                 if not field_mapping:
                     field_mapping = {'type': 'keyword'}
 
                 return path, field_mapping
 
-            raise TypeError(
-                "Schema entry value must be either JSONPath string or dict with {'path': ..., ...}."
-            )
+            raise TypeError("Schema entry value must be either JSONPath string or dict with {'path': ..., ...}.")
 
         properties: dict = {}
-        nested_props: dict[str, dict] = defaultdict(
-            lambda: {'type': 'nested', 'properties': {}}
-        )
+        nested_props: dict[str, dict] = defaultdict(lambda: {'type': 'nested', 'properties': {}})
 
         for _, defn in search_schema.items():
             json_path, field_mapping = extract_path_and_mapping(defn)
@@ -136,9 +126,7 @@ class DSLTranslator:
             if nested_path in properties:
                 existing = properties[nested_path]
                 if not isinstance(existing, dict):
-                    raise TypeError(
-                        f'Mapping for {nested_path!r} must be a dict, got {type(existing)!r}'
-                    )
+                    raise TypeError(f'Mapping for {nested_path!r} must be a dict, got {type(existing)!r}')
 
                 if 'type' in existing and existing['type'] != 'nested':
                     raise ValueError(

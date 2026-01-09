@@ -68,7 +68,7 @@ def test_schema_to_es_mapping_only_simple_fields():
             'properties': {
                 'status': {'type': 'keyword'},
                 'user.id': {'type': 'keyword'},
-            }
+            },
         }
     }
 
@@ -92,7 +92,7 @@ def test_schema_to_es_mapping_simple_and_nested():
                         'productId': {'type': 'keyword'},
                     },
                 },
-            }
+            },
         }
     }
 
@@ -109,7 +109,7 @@ def test_schema_to_es_mapping_array_of_primitives_not_nested():
             'dynamic': False,
             'properties': {
                 'tags': {'type': 'keyword'},
-            }
+            },
         }
     }
 
@@ -159,9 +159,7 @@ def test_build_query_nested_term():
 
 
 def test_build_query_or():
-    query = DSLTranslator.build_query_from_expression(
-        '$.status == "paid" || $.status == "pending"'
-    )
+    query = DSLTranslator.build_query_from_expression('$.status == "paid" || $.status == "pending"')
 
     assert query == {
         'query': {
@@ -183,9 +181,7 @@ def test_build_query_not_with_neq():
 
 
 def test_build_query_grouped_and_or():
-    query = DSLTranslator.build_query_from_expression(
-        '($.price > 10 && $.price <= 20) || $.status == "paid"'
-    )
+    query = DSLTranslator.build_query_from_expression('($.price > 10 && $.price <= 20) || $.status == "paid"')
 
     assert query == {
         'query': {
@@ -219,7 +215,7 @@ def test_schema_to_es_mapping_dict_entry_defaults_to_keyword():
             'dynamic': False,
             'properties': {
                 'status': {'type': 'keyword'},
-            }
+            },
         }
     }
 
@@ -238,7 +234,7 @@ def test_schema_to_es_mapping_inline_mapping_simple_field():
             'properties': {
                 'price': {'type': 'double'},
                 'status': {'type': 'keyword'},
-            }
+            },
         }
     }
 
@@ -270,7 +266,7 @@ def test_schema_to_es_mapping_explicit_mapping_simple_field():
                         'keyword': {'type': 'keyword', 'ignore_above': 256},
                     },
                 },
-            }
+            },
         }
     }
 
@@ -292,7 +288,7 @@ def test_schema_to_es_mapping_inline_mapping_nested_leaf():
                         'price': {'type': 'double'},
                     },
                 }
-            }
+            },
         }
     }
 
@@ -325,7 +321,7 @@ def test_schema_to_es_mapping_explicit_mapping_nested_leaf():
                         }
                     },
                 }
-            }
+            },
         }
     }
 
@@ -358,7 +354,7 @@ def test_schema_to_es_mapping_merge_nested_container_mapping_with_generated_prop
                         'price': {'type': 'double'},
                     },
                 }
-            }
+            },
         }
     }
 
@@ -375,7 +371,7 @@ def test_schema_to_es_mapping_json_path_alias_supported_and_not_leaked():
             'dynamic': False,
             'properties': {
                 'price': {'type': 'double'},
-            }
+            },
         }
     }
 
