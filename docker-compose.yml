@@ -143,6 +143,22 @@ services:
     depends_on:
       - elastic-logs
 
+  kibana-init:
+    image: python:3.14-slim
+    container_name: kibana-init
+    depends_on:
+      - kibana
+    environment:
+      KIBANA_URL: "http://kibana:5601"
+      DATA_VIEW_TITLE: "filebeat-*"
+      TIME_FIELD: "@timestamp"
+      SAVED_SEARCH_ID: "docker-logs"
+      SAVED_SEARCH_TITLE: "Logs: @timestamp + message"
+    volumes:
+      - ./kibana/provision.py:/provision.py:ro
+    command: ["python", "/provision.py"]
+    restart: "no"
+
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.2
     container_name: filebeat
