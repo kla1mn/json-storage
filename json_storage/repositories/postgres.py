@@ -254,9 +254,7 @@ class PostgresDBRepository:
         table = namespace + '_metadata'
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(
-                    sql.SQL('drop table if exists {}').format(sql.Identifier(table))
-                )
+                await cur.execute(sql.SQL('drop table if exists {}').format(sql.Identifier(table)))
             await conn.commit()
 
     async def create_document(
@@ -413,11 +411,7 @@ class PostgresDBRepository:
                 )
                 rows = await cur.fetchall()
 
-                await cur.execute(
-                    sql.SQL('select count(*) as cnt from {}').format(
-                        sql.Identifier(table)
-                    )
-                )
+                await cur.execute(sql.SQL('select count(*) as cnt from {}').format(sql.Identifier(table)))
                 total_row = await cur.fetchone()
 
         items = [

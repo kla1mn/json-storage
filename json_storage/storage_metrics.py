@@ -6,12 +6,8 @@ from psycopg_pool import AsyncConnectionPool
 
 # тута не все метрики заведены в графики, надо прикинуть, что мы точно хотим мониторить
 postgres_up = Gauge('json_storage_postgres_metrics_up', 'Postgres metrics availability')
-postgres_db_size = Gauge(
-    'json_storage_postgres_database_size_bytes', 'Postgres database size in bytes'
-)
-postgres_connections = Gauge(
-    'json_storage_postgres_connections', 'Postgres active connections'
-)
+postgres_db_size = Gauge('json_storage_postgres_database_size_bytes', 'Postgres database size in bytes')
+postgres_connections = Gauge('json_storage_postgres_connections', 'Postgres active connections')
 postgres_table_size = Gauge(
     'json_storage_postgres_table_size_bytes',
     'Size of the tables and indexes in bytes',
@@ -28,9 +24,7 @@ elastic_index_store_size = Gauge(
     'Elastic index store size in bytes',
     ['index'],
 )
-elastic_index_docs = Gauge(
-    'json_storage_elastic_index_docs', 'Elastic index document count', ['index']
-)
+elastic_index_docs = Gauge('json_storage_elastic_index_docs', 'Elastic index document count', ['index'])
 
 indexing_pending = Gauge(
     'json_storage_indexing_pending_total',
@@ -55,9 +49,7 @@ async def collect_postgres_metrics():
             db_size = await cursor.fetchone()
             postgres_db_size.set(db_size[0])
 
-            await cursor.execute(
-                "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"
-            )
+            await cursor.execute("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'")
             active_connections = await cursor.fetchone()
             postgres_connections.set(active_connections[0])
 
@@ -76,15 +68,11 @@ async def collect_elastic_metrics():
 
     health = await es.cluster.health()
     cluster_health = health['status']
-    elastic_cluster_health.set(
-        {'green': 2, 'yellow': 1, 'red': 0}.get(cluster_health, 0)
-    )
+    elastic_cluster_health.set({'green': 2, 'yellow': 1, 'red': 0}.get(cluster_health, 0))
 
     indices = await es.indices.stats()
     for index, stats in indices['indices'].items():
-        elastic_index_store_size.labels(index=index).set(
-            stats['total']['store']['size_in_bytes']
-        )
+        elastic_index_store_size.labels(index=index).set(stats['total']['store']['size_in_bytes'])
         elastic_index_docs.labels(index=index).set(stats['total']['docs']['count'])
 
     await es.close()
@@ -96,17 +84,13 @@ async def collect_indexing_lag():
 
     async with pool.connection() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute(
-                'SELECT created_at FROM json_buffer ORDER BY created_at LIMIT 1'
-            )
+            await cursor.execute('SELECT created_at FROM json_buffer ORDER BY created_at LIMIT 1')
             oldest = await cursor.fetchone()
             if oldest:
                 oldest_age = time() - oldest[0].timestamp()
                 indexing_oldest_age.set(oldest_age)
 
-            await cursor.execute(
-                'SELECT count(*) FROM json_buffer WHERE indexed = FALSE'
-            )
+            await cursor.execute('SELECT count(*) FROM json_buffer WHERE indexed = FALSE')
             pending = await cursor.fetchone()[0]
             indexing_pending.set(pending)
 

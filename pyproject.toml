@@ -39,3 +39,6 @@ quote-style = "single"
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
+
+[tool.ruff]
+line-length = 120

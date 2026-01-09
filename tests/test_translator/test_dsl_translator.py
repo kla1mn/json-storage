@@ -159,9 +159,7 @@ def test_build_query_nested_term():
 
 
 def test_build_query_or():
-    query = DSLTranslator.build_query_from_expression(
-        '$.status == "paid" || $.status == "pending"'
-    )
+    query = DSLTranslator.build_query_from_expression('$.status == "paid" || $.status == "pending"')
 
     assert query == {
         'query': {
@@ -183,9 +181,7 @@ def test_build_query_not_with_neq():
 
 
 def test_build_query_grouped_and_or():
-    query = DSLTranslator.build_query_from_expression(
-        '($.price > 10 && $.price <= 20) || $.status == "paid"'
-    )
+    query = DSLTranslator.build_query_from_expression('($.price > 10 && $.price <= 20) || $.status == "paid"')
 
     assert query == {
         'query': {

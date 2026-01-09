@@ -59,9 +59,7 @@ async def test_insert_document_in_reindex_namespace(
     }
     async with elasticsearch_repo.get_client() as client:
         await client.indices.create(index=new_index, body=mappings)
-    await redis_repo.add_to_dict(
-        elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, namespace_for_test, new_index
-    )
+    await redis_repo.add_to_dict(elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, namespace_for_test, new_index)
 
     # Вставляем новый документ
     new_document = b'{"a": "42", "name": "Hi", "mau": "miu"}'

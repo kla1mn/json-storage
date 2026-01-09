@@ -21,9 +21,7 @@ async def _body_bytes(raw: bytes):
 
 
 @pytest.mark.asyncio
-async def test_create_or_update_index_with_mappings(
-    elasticsearch_repo, es_client, index_for_test, mappings_for_test
-):
+async def test_create_or_update_index_with_mappings(elasticsearch_repo, es_client, index_for_test, mappings_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=mappings_for_test,
@@ -40,9 +38,7 @@ async def test_create_or_update_index_with_mappings(
 
 
 @pytest.mark.asyncio
-async def test_set_document_in_elasticsearch(
-    elasticsearch_repo, es_client, index_for_test, mappings_for_test
-):
+async def test_set_document_in_elasticsearch(elasticsearch_repo, es_client, index_for_test, mappings_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=mappings_for_test,
@@ -55,9 +51,7 @@ async def test_set_document_in_elasticsearch(
 
 
 @pytest.mark.asyncio
-async def test_search_document_in_elasticsearch(
-    elasticsearch_repo, es_client, index_for_test, mappings_for_test
-):
+async def test_search_document_in_elasticsearch(elasticsearch_repo, es_client, index_for_test, mappings_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=mappings_for_test,
@@ -71,9 +65,7 @@ async def test_search_document_in_elasticsearch(
 
 
 @pytest.mark.asyncio
-async def test_not_existent_document_in_elasticsearch(
-    elasticsearch_repo, es_client, index_for_test, mappings_for_test
-):
+async def test_not_existent_document_in_elasticsearch(elasticsearch_repo, es_client, index_for_test, mappings_for_test):
     await elasticsearch_repo.create_or_update_index(
         index_for_test,
         mappings=mappings_for_test,
@@ -100,9 +92,7 @@ async def test_search_in_not_index_field_in_elasticsearch(
 
 
 @pytest.mark.asyncio
-async def test_list_document_in_elasticsearch(
-    elasticsearch_repo, es_client, index_for_test
-):
+async def test_list_document_in_elasticsearch(elasticsearch_repo, es_client, index_for_test):
     mappings_for_test = {
         'mappings': {
             'dynamic': False,
@@ -134,13 +124,11 @@ async def test_list_document_in_elasticsearch(
         {'a': [1, 100], 'name': 'Привет Эластик!', 'mau': 'МЯЯЯЯУУУУ'},
         {'a': [10000], 'name': 'Привет Эластик!', 'mau': 'МЯЯЯЯУУУУ'},
     ]
-    assert sorted(docs, key=lambda x: x['a'][0]) == sorted(
-        expected_result, key=lambda x: x['a'][0]
-    )
+    assert sorted(docs, key=lambda x: x['a'][0]) == sorted(expected_result, key=lambda x: x['a'][0])
 
 
 @pytest.mark.asyncio
-async def test_reindex(elasticsearch_repo, es_client, index_for_test):
+async def test_reindex(elasticsearch_repo, redis_repo, es_client, index_for_test):
     first_mappings = {
         'mappings': {
             'dynamic': False,
@@ -159,9 +147,7 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
     document = {'a': 52, 'name': 'Привет Эластик!', 'mau': 44}
     await elasticsearch_repo.insert_document(index_for_test, doc_id, document)
     body_for_search_first = {'query': {'term': {'a': 52}}}
-    docs = await elasticsearch_repo.search_in_index(
-        index_for_test, body_for_search_first
-    )
+    docs = await elasticsearch_repo.search_in_index(index_for_test, body_for_search_first)
     assert docs == [document]
 
     second_mappings = {
@@ -175,10 +161,11 @@ async def test_reindex(elasticsearch_repo, es_client, index_for_test):
         },
     }
     await elasticsearch_repo.create_or_update_index(index_for_test, second_mappings)
+    task_id = await redis_repo.get_from_dict(elasticsearch_repo.PROGRESS_BAR_DICT_NAME, index_for_test)
+    percent = await elasticsearch_repo.get_progress_bar_by_task_id(task_id)
+    assert percent == 100
     body_for_search_second = {'query': {'term': {'mau': 44}}}
-    docs = await elasticsearch_repo.search_in_index(
-        index_for_test, body_for_search_second
-    )
+    docs = await elasticsearch_repo.search_in_index(index_for_test, body_for_search_second)
     assert docs == [document]
 
 
@@ -193,12 +180,8 @@ async def test_two_reindex(elasticsearch_repo, redis_repo, es_client, index_for_
             },
         },
     }
-    await elasticsearch_repo.create_or_update_index(
-        index_for_test, mappings=first_mappings
-    )
-    await redis_repo.add_to_dict(
-        elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, index_for_test, 'in_reindexing'
-    )
+    await elasticsearch_repo.create_or_update_index(index_for_test, mappings=first_mappings)
+    await redis_repo.add_to_dict(elasticsearch_repo.REINDEX_NAMESPACES_DICT_NAME, index_for_test, 'in_reindexing')
     second_mappings = {
         'mappings': {
             'dynamic': False,

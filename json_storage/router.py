@@ -6,8 +6,8 @@ from starlette.responses import JSONResponse, Response
 from fastapi import APIRouter, Body, Query, Request
 from uuid import UUID
 
-from .errors import ReindexNamespaceYetError
-from .schemas import DocumentListSchema, DocumentSchema
+from .errors import ReindexNamespaceYetError, NotExistentReindexTaskError
+from .schemas import DocumentListSchema, DocumentSchema, ProgressBarSchema
 from .services import MultiRepositoryService
 
 router = APIRouter(prefix='/ns', route_class=DishkaRoute)
@@ -55,9 +55,7 @@ async def create_object(
     request: Request,
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:
-    object_id = await multi_repo.create_object_stream(
-        namespace, request.stream(), document_name=document_name
-    )
+    object_id = await multi_repo.create_object_stream(namespace, request.stream(), document_name=document_name)
     return JSONResponse(content=str(object_id))
 
 
@@ -110,9 +108,7 @@ async def read_namespace(
     namespace: str,
     multi_repo: FromDishka[MultiRepositoryService],
 ) -> JSONResponse:
-    return JSONResponse(
-        content=(await multi_repo.read_namespace(namespace)).model_dump(mode='json')
-    )
+    return JSONResponse(content=(await multi_repo.read_namespace(namespace)).model_dump(mode='json'))
 
 
 @router.get('/{namespace}/objects', response_model=DocumentListSchema)
@@ -131,4 +127,16 @@ async def list_objects(
     ),
 ) -> JSONResponse:
     content = await multi_repo.read_limit_namespace(namespace, limit, cursor)
+    return JSONResponse(content=content.model_dump(mode='json'))
+
+
+@router.get('/{namespace}/progress-bar', response_model=ProgressBarSchema)
+async def read_progress_bar(
+    namespace: str,
+    multi_repo: FromDishka[MultiRepositoryService],
+) -> JSONResponse:
+    try:
+        content = await multi_repo.get_progress_bar(namespace)
+    except NotExistentReindexTaskError as exc:
+        raise HTTPException(404, detail='Нет задания на переиндексацию') from exc
     return JSONResponse(content=content.model_dump(mode='json'))

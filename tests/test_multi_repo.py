@@ -30,16 +30,12 @@ async def test_set_many_search_schema_and_search(
         'b': 'mur',
     }
     document = b'{"status": "active", "user.id": "user_12345", "a": "mau", "b": "mur"}'
-    await multi_repository_service.create_object_stream(
-        namespace, _body_bytes(document), document_name='doc_name'
-    )
+    await multi_repository_service.create_object_stream(namespace, _body_bytes(document), document_name='doc_name')
     search_schema['a'] = '$.a'
     await multi_repository_service.set_search_schema(namespace, search_schema)
     search_schema['b'] = '$.b'
     await multi_repository_service.set_search_schema(namespace, search_schema)
-    docs = await multi_repository_service.search_objects(
-        namespace, '$.b == "mur"', 100, 0
-    )
+    docs = await multi_repository_service.search_objects(namespace, '$.b == "mur"', 100, 0)
     assert len(docs) == 1
     doc = docs[0]
     assert (doc_id := doc.get('id'))

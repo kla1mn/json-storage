@@ -36,9 +36,7 @@ async def index_document_to_elastic(
     if not isinstance(payload, dict):
         raise TypeError('Only JSON objects (dict) are supported for indexing')
 
-    ok = await elastic_repo.insert_document(
-        namespace=index_name, doc_id=object_id, document=payload
-    )
+    ok = await elastic_repo.insert_document(namespace=index_name, doc_id=object_id, document=payload)
     if ok:
         await postgres.delete_chunks_by_id(object_id)
 
@@ -63,9 +61,7 @@ async def insert_in_reindex_namespace(
     elastic_repo: FromDishka[ElasticSearchDBRepository],
     redis_repo: FromDishka[RedisDBRepository],
 ) -> None:
-    index = await redis_repo.get_from_dict(
-        elastic_repo.REINDEX_NAMESPACES_DICT_NAME, real_namespace
-    )
+    index = await redis_repo.get_from_dict(elastic_repo.REINDEX_NAMESPACES_DICT_NAME, real_namespace)
     if not index:
         await asyncio.sleep(3)
         raise RuntimeError('Ждем, когда инициализируется индекс.')
