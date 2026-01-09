@@ -32,7 +32,7 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -46,15 +46,11 @@ services:
       POSTGRES_USER: json
       POSTGRES_PASSWORD: json
     command:
-      - postgres
-      - -c
-      - log_min_duration_statement=0
-      - -c
-      - log_connections=on
-      - -c
-      - log_disconnections=on
-      - -c
-      - "log_line_prefix=%m [%p] %u@%d %r"
+      ["postgres",
+       "-c", "log_min_duration_statement=0",
+       "-c", "log_connections=on",
+       "-c", "log_disconnections=on",
+       "-c", "log_line_prefix=%m [%p] %u@%d %r"]
     ports:
       - "5432:5432"
     volumes:
@@ -81,7 +77,9 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow\\&timeout=1s >/dev/null || exit 1"]
+      test:
+        ["CMD-SHELL",
+         "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow\\&timeout=1s >/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -157,6 +155,27 @@ services:
     depends_on:
       - elastic-logs
       - kibana
+
+  taskiq-worker:
+    build: .
+    container_name: taskiq-worker
+    environment:
+      POSTGRES__DSN: postgresql://json:json@postgres:5432/jsonstorage
+      ELASTIC_SEARCH__DSN: http://elastic-data:9200
+      REDIS__DSN: redis://redis:6379
+      RABBIT_MQ__DSN: amqp://guest:guest@rabbitmq:5672/
+      ENVIRONMENT: local
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      elastic-data:
+        condition: service_healthy
+    restart: unless-stopped
+    command:
+      ["uv", "run", "taskiq", "worker",
+      "json_storage.cmd.taskiq_broker:taskiq_broker", "json_storage.tasks", "--log-level=DEBUG"]
 
 volumes:
   pgdata:
