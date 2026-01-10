@@ -60,6 +60,7 @@ class ElasticSearchDBRepository:
                     if task.get('completed'):
                         break
                     await asyncio.sleep(0.2)
+                await client.indices.delete(index=index, ignore_unavailable=True)
             except Exception as exc:
                 await client.indices.delete(index=new_index, ignore_unavailable=True)
                 raise exc
