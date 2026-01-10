@@ -142,6 +142,7 @@ async def test_reindex(elasticsearch_repo, redis_repo, es_client, index_for_test
         index_for_test,
         mappings=first_mappings,
     )
+    assert await es_client.indices.exists(index=index_for_test)
 
     doc_id = f'{uuid.uuid4()}'
     document = {'a': 52, 'name': 'Привет Эластик!', 'mau': 44}
@@ -167,6 +168,7 @@ async def test_reindex(elasticsearch_repo, redis_repo, es_client, index_for_test
     body_for_search_second = {'query': {'term': {'mau': 44}}}
     docs = await elasticsearch_repo.search_in_index(index_for_test, body_for_search_second)
     assert docs == [document]
+    assert not await es_client.indices.exists(index=index_for_test)
 
 
 @pytest.mark.asyncio
