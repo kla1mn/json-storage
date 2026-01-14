@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+
 from dishka import Provider, Scope, provide
 from .repositories import (
     PostgresDBRepository,
@@ -11,10 +13,11 @@ from .settings import settings
 class DataBaseProvider(Provider):
     scope = Scope.REQUEST
 
-    @provide(scope=Scope.REQUEST)
-    @staticmethod
-    def get_postgres_db() -> PostgresDBRepository:
-        return PostgresDBRepository(dsn=settings.postgres.dsn)
+    @provide(scope=Scope.APP)
+    async def get_postgres_db(self) -> AsyncIterator[PostgresDBRepository]:
+        repo = PostgresDBRepository(dsn=settings.postgres.dsn)
+        yield repo
+        await repo.aclose()
 
     @provide(scope=Scope.REQUEST)
     @staticmethod

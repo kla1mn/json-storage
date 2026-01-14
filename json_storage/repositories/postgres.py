@@ -18,18 +18,23 @@ from json_storage.schemas import DocumentSchema, DocumentListSchema
 
 @dataclass
 class PostgresDBRepository:
-    # TODO: хочу кастомный контекстный менеджер вместо вложенных with connection, with pool и тд
     dsn: str
 
     _pool: AsyncConnectionPool | None = field(init=False, default=None)
 
     async def _get_pool(self) -> AsyncConnectionPool:
         if self._pool is None:
-            self._pool = AsyncConnectionPool(conninfo=self.dsn)
+            self._pool = AsyncConnectionPool(
+                conninfo=self.dsn,
+                min_size=2,
+                max_size=10,
+                timeout=5,
+                open=True
+                # open=False  (если твоя версия psycopg_pool это поддерживает)
+            )
 
         return self._pool
 
-    # TODO: без этой штуки не умирает коннекшен в тестах, скорее всего и в реальной работе тоже умирать не будет
     async def aclose(self) -> None:
         if self._pool is not None:
             await self._pool.close()
@@ -225,7 +230,6 @@ class PostgresDBRepository:
         return deleted_rows > 0
 
     async def create_meta_table_by_namespace(self, namespace: str) -> None:
-        # TODO: хочеца проверку на содержимое неймспейса по регулярочке, а пока "слушаю и верю каждому твоему слову"
         table = namespace + '_metadata'
         pool = await self._get_pool()
         async with pool.connection() as conn:
@@ -248,8 +252,6 @@ class PostgresDBRepository:
             await conn.commit()
 
     async def drop_meta_table_by_namespace(self, namespace: str) -> None:
-        # TODO: тоже бы проверочку названия, хотя if exists скипнет,
-        #  но в целом чтоб не делать лишний запрос можно и проверить на этом этапе
         pool = await self._get_pool()
         table = namespace + '_metadata'
         async with pool.connection() as conn:
@@ -465,3 +467,50 @@ class PostgresDBRepository:
                 raise
 
         return (meta_deleted > 0) and (chunks_deleted > 0)
+
+
+    async def get_documents_meta_bulk(
+            self,
+            namespace: str,
+            ids: list[str],
+    ) -> list[DocumentSchema]:
+        if not ids:
+            return []
+
+        pool = await self._get_pool()
+        table = namespace + "_metadata"
+        uid_list = [uuid.UUID(x) for x in ids]
+
+        async with pool.connection() as conn:
+            async with conn.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    sql.SQL(
+                        """
+                        select id,
+                               document_name,
+                               content_length,
+                               content_hash,
+                               created_at,
+                               updated_at
+                        from {}
+                        where id = any (%s)
+                        """
+                    ).format(sql.Identifier(table)),
+                    (uid_list,),
+                )
+                rows = await cur.fetchall()
+
+        meta_by_id = {
+            str(r["id"]): DocumentSchema(
+                id=str(r["id"]),
+                document_name=r["document_name"],
+                created_at=r["created_at"],
+                updated_at=r["updated_at"],
+                content_length=r["content_length"],
+                content_hash=r["content_hash"],
+            )
+            for r in rows
+            if r is not None
+        }
+
+        return [meta_by_id[i] for i in ids if i in meta_by_id]

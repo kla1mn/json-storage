@@ -66,3 +66,13 @@ async def insert_in_reindex_namespace(
         await asyncio.sleep(3)
         raise RuntimeError('Ждем, когда инициализируется индекс.')
     await elastic_repo.insert_in_index(index, doc_id, document)
+
+
+@taskiq_broker.task(retry_on_error=True, max_retries=10)
+@inject
+async def delete_document_from_elastic(
+    namespace: str,
+    object_id: str,
+    elastic_repo: FromDishka[ElasticSearchDBRepository],
+) -> None:
+    await elastic_repo.delete_document(namespace, object_id, refresh=None)

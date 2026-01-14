@@ -37,8 +37,6 @@ class MultiRepositoryService:
         return meta
 
     async def get_object_body(self, namespace: str, object_id: UUID) -> dict[str, Any]:
-        await self.get_object_meta(namespace, object_id)
-
         doc = await self.elastic_repository.get_document(
             namespace=namespace,
             doc_id=str(object_id),
@@ -71,10 +69,10 @@ class MultiRepositoryService:
         return uuid.UUID(doc.id)
 
     async def delete_object_by_id(self, namespace: str, object_id: UUID) -> None:
-        await asyncio.gather(
-            self.postgres_repository.delete_object_by_id(namespace, str(object_id)),
-            self.elastic_repository.delete_document(namespace, str(object_id)),
-        )
+
+        await self.postgres_repository.delete_object_by_id(namespace, str(object_id))
+        from json_storage.tasks import delete_document_from_elastic
+        await delete_document_from_elastic.kiq(namespace=namespace, object_id=str(object_id))
 
     async def set_search_schema(
         self,
@@ -110,11 +108,8 @@ class MultiRepositoryService:
             size=size,
             from_=from_,
         )
-        metas: list[DocumentSchema | None] = await asyncio.gather(
-            *[self.postgres_repository.get_document_meta(namespace, doc_id) for doc_id in ids]
-        )
-
-        return [m.model_dump(mode='json') for m in metas if m is not None]
+        metas = await self.postgres_repository.get_documents_meta_bulk(namespace, ids)
+        return [m.model_dump(mode="json") for m in metas]
 
     async def read_namespace(self, namespace: str) -> DocumentListSchema:
         if not await self.redis_repository.check_in_set(self.ALL_NAMESPACES_SET_NAME, namespace):

@@ -197,7 +197,7 @@ services:
     restart: unless-stopped
     command:
       [ "/app/.venv/bin/taskiq", "worker",
-        "json_storage.cmd.taskiq_broker:taskiq_broker", "json_storage.tasks", "--log-level=DEBUG" ]
+        "json_storage.cmd.taskiq_broker:taskiq_broker", "json_storage.tasks", "--log-level=DEBUG", "--workers=4"]
 
 volumes:
   pgdata:
